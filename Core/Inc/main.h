@@ -103,6 +103,9 @@ void Error_Handler(void);
 #define GPIO1_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
+// #define SEMI_HOSTING_ENABLED
+
+extern CRC_HandleTypeDef hcrc;
 
 /* USER CODE END Private defines */
 
