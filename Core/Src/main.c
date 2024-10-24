@@ -58,7 +58,7 @@ I2C_HandleTypeDef hi2c2;
 SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
-
+static uint8_t hv_status = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -251,9 +251,6 @@ int main(void)
   // SET_DAC_Value(DAC_CHANNEL_VGND, DAC_BIT_12, 0x0000);
   HAL_Delay(250);
 
-  // turn on power supply
-  //HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_RESET);
-  //HAL_GPIO_WritePin(HV_REG_DISABLE_GPIO_Port, HV_REG_DISABLE_Pin, GPIO_PIN_RESET);
 
 
   /* USER CODE END 2 */
@@ -268,8 +265,27 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    GPIO_PinState pinState = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_12);
+
+    if (pinState == GPIO_PIN_RESET && hv_status == 0) {
+        // Pin PB12 is at GND (0V)
+        // Take appropriate action here, e.g., turn on an LED
+
+		// turn on power supply
+    	hv_status = 1;
+		HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(HV_REG_DISABLE_GPIO_Port, HV_REG_DISABLE_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_RESET);
+
+    } else if(pinState == GPIO_PIN_SET && hv_status == 1) {
+		// turn off power supply
+    	hv_status = 0;
+		HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(HV_REG_DISABLE_GPIO_Port, HV_REG_DISABLE_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_SET);
+    }
 	HAL_GPIO_TogglePin(HB_LED_GPIO_Port, HB_LED_Pin);
-	HAL_Delay(500);
+	HAL_Delay(250);
   }
   /* USER CODE END 3 */
 }
@@ -640,10 +656,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(CLR_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : GPIO4_Pin GPIO3_Pin GPIO2_Pin GPIO1_Pin */
-  GPIO_InitStruct.Pin = GPIO4_Pin|GPIO3_Pin|GPIO2_Pin|GPIO1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  /*Configure GPIO pins : PB15 PB14 PB13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_15|GPIO_PIN_14|GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF0_SPI2;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : HB_LED_Pin SYNC_Pin */
@@ -652,6 +670,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : GPIO1_Pin */
+  GPIO_InitStruct.Pin = GPIO1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIO1_GPIO_Port, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
