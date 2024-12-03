@@ -26,6 +26,7 @@
 #include "logging.h"
 #include "usbd_cdc_if.h"
 #include "uart_comms.h"
+#include "hv_supply.h"
 #include "utils.h"
 
 #include <stdio.h>
@@ -69,7 +70,7 @@ DMA_HandleTypeDef hdma_usart3_tx;
 uint8_t FIRMWARE_VERSION_DATA[3] = {1, 0, 0};
 uint8_t rxBuffer[COMMAND_MAX_SIZE];
 uint8_t txBuffer[COMMAND_MAX_SIZE];
-static uint8_t hv_status = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,97 +91,6 @@ static void MX_TIM14_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-static HAL_StatusTypeDef dac_read_reg(uint32_t* data){
-    uint8_t rxBuffer[4];
-    HAL_StatusTypeDef status = HAL_ERROR;
-
-    HAL_GPIO_WritePin(SYNC_GPIO_Port, SYNC_Pin, GPIO_PIN_RESET);  // Pull SYNC low
-
-    status= HAL_SPI_Receive(&hspi1, rxBuffer, 4, HAL_MAX_DELAY);
-    HAL_Delay(1); // Delay
-
-    HAL_GPIO_WritePin(SYNC_GPIO_Port, SYNC_Pin, GPIO_PIN_SET);   // Pull SYNC high
-
-    *data = (rxBuffer[0] << 24) | (rxBuffer[1] << 16) | (rxBuffer[2] << 8) | rxBuffer[3];
-
-	return status;
-}
-
-static HAL_StatusTypeDef dac_write_reg(uint32_t data)
-{
-    uint8_t txBuffer[4];
-    HAL_StatusTypeDef status = HAL_ERROR;
-
-    txBuffer[0] = (data >> 24) & 0xFF;
-    txBuffer[1] = (data >> 16) & 0xFF;
-    txBuffer[2] = (data >> 8) & 0xFF;
-    txBuffer[3] = data & 0xFF;
-
-    HAL_GPIO_WritePin(SYNC_GPIO_Port, SYNC_Pin, GPIO_PIN_RESET);  // Pull SYNC low
-
-    status = HAL_SPI_Transmit(&hspi1, txBuffer, 4, HAL_MAX_DELAY);
-	HAL_Delay(1); // Delay
-
-	HAL_GPIO_WritePin(SYNC_GPIO_Port, SYNC_Pin, GPIO_PIN_SET);   // Pull SYNC high
-
-	return status;
-}
-
-void Read_Status_Register(uint32_t *status_data) {
-    uint32_t command=0xF4000000;
-
-    dac_write_reg(command);
-    dac_read_reg(status_data);
-
-}
-
-// Enum for DAC Channels
-typedef enum {
-    DAC_CHANNEL_HVP = 0,  	// channel A
-    DAC_CHANNEL_HVM = 1,  		// channel B
-    DAC_CHANNEL_VGND = 2,  		// channel C
-    DAC_CHANNEL_D
-} DAC_Channel_t;
-
-// Enum for DAC Bit Depth
-typedef enum {
-    DAC_BIT_12 = 12,
-    DAC_BIT_14 = 14,
-    DAC_BIT_16 = 16
-} DAC_BitDepth_t;
-
-uint32_t SET_DAC_Value(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t value) {
-    uint32_t command=0x0;
-
-    // Shift the value based on the bit depth
-    switch (bitDepth) {
-        case DAC_BIT_12:
-        	command &= 0x0FFF;  // Mask to 12 bits
-        	command <<= 4;      // Align to the most significant bits (MSB)
-            break;
-        case DAC_BIT_14:
-        	command &= 0x3FFF;  // Mask to 14 bits
-        	command <<= 2;      // Align to the most significant bits (MSB)
-            break;
-        case DAC_BIT_16:
-        	command &= 0xFFFF;  // Mask to 16 bits
-            // No shifting needed for 16-bit values
-            break;
-        default:
-            return 0;  // Invalid bit depth
-    }
-
-    // Construct the 32-bit data to write to the DAC
-    // Assuming the format: [Command (4 bits)] [Channel (4 bits)] [Data (24 bits)]
-    // Example: Command for writing to DAC, with the channel encoded in bits [27:24]
-    command = (0x0 << 28);  // shift the read or write bit in
-    command |= (0x3 << 24);  // shift the command in bits [27:24]
-    command |= (channel << 20);  // shift the channel in bits [23:20]
-    command |= (value << 4);            // The 16-bit value aligned properly
-
-    dac_write_reg(command);
-    return command;
-}
 
 /* USER CODE END 0 */
 
@@ -247,22 +157,14 @@ int main(void)
   HAL_GPIO_WritePin(SCL_CFG_GPIO_Port, SCL_CFG_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(SDA_REM_GPIO_Port, SDA_REM_Pin, GPIO_PIN_RESET);
 
-  // turn hv led off
-  HAL_GPIO_WritePin(HB_LED_GPIO_Port, HB_LED_Pin, GPIO_PIN_SET);
-
   // I2C_scan(&hi2c1);  // 0x49
   // I2C_scan(&hi2c2);  // 0x6D
 
   // clear dac
-  HAL_GPIO_WritePin(CLR_GPIO_Port, CLR_Pin, GPIO_PIN_SET);
-  HAL_Delay(250);
-  HAL_GPIO_WritePin(CLR_GPIO_Port, CLR_Pin, GPIO_PIN_RESET);
-  HAL_Delay(250);
-  HAL_GPIO_WritePin(CLR_GPIO_Port, CLR_Pin, GPIO_PIN_SET);
-  HAL_Delay(250);
+  HV_ClearDAC();
 
-  SET_DAC_Value(DAC_CHANNEL_HVP, DAC_BIT_12, 0x4D00);  //~1.6v
-  SET_DAC_Value(DAC_CHANNEL_HVM, DAC_BIT_12, 0x4D00);  //~1.6v
+  HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, 0x4D00);  //~1.6v
+  HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0x4D00);  //~1.6v
   // SET_DAC_Value(DAC_CHANNEL_VGND, DAC_BIT_12, 0x0000);
   HAL_Delay(250);
 
