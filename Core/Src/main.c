@@ -274,7 +274,9 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  printf("Console up and running\r\n");
+  printf("\r\nController initialize and running\r\n");
+
+  comms_start_task();
 
 
   while (1)
