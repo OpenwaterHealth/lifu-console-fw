@@ -90,17 +90,6 @@ static void MX_TIM14_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-static void PrintI2CSpeed(I2C_HandleTypeDef *hi2c)
-{
-  uint32_t timing = hi2c->Init.Timing;
-  uint32_t pclk = HAL_RCC_GetPCLK1Freq(); // Get the peripheral clock frequency
-
-  // Calculate the I2C speed in Hz
-  uint32_t i2c_speed = pclk / ((timing & 0xFFFF) + 1);
-
-  printf("I2C Speed: %ld kHz\r\n", i2c_speed / 10); // Print the I2C speed in kHz
-}
-
 static HAL_StatusTypeDef dac_read_reg(uint32_t* data){
     uint8_t rxBuffer[4];
     HAL_StatusTypeDef status = HAL_ERROR;
@@ -246,7 +235,7 @@ int main(void)
 
   init_dma_logging();
   printf("\033c");
-  printf("Openwater USTXv3 Controller FW v%d.%d.%d\r\n\r\n",FIRMWARE_VERSION_DATA[0], FIRMWARE_VERSION_DATA[1], FIRMWARE_VERSION_DATA[2]);
+  printf("Open-LIFU Console Controller FW v%d.%d.%d\r\n\r\n",FIRMWARE_VERSION_DATA[0], FIRMWARE_VERSION_DATA[1], FIRMWARE_VERSION_DATA[2]);
   printf("CPU Clock Frequency: %lu MHz\r\n", HAL_RCC_GetSysClockFreq() / 1000000);
 
   // disable power supply
@@ -261,11 +250,8 @@ int main(void)
   // turn hv led off
   HAL_GPIO_WritePin(HB_LED_GPIO_Port, HB_LED_Pin, GPIO_PIN_SET);
 
-  PrintI2CSpeed(&hi2c1);
-  PrintI2CSpeed(&hi2c2);
-
-  I2C_scan(&hi2c1);
-  I2C_scan(&hi2c2);
+  // I2C_scan(&hi2c1);  // 0x49
+  // I2C_scan(&hi2c2);  // 0x6D
 
   // clear dac
   HAL_GPIO_WritePin(CLR_GPIO_Port, CLR_Pin, GPIO_PIN_SET);
@@ -288,7 +274,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  printf("Open-LIFU Console FW V1.0.0\n");
+  printf("Console up and running\r\n");
 
 
   while (1)
