@@ -26,6 +26,7 @@ typedef enum {
 	OW_JSON = 0xE5,
 	OW_I2C_PASSTHRU = 0xE9,
 	OW_CONTROLLER = 0xEA,
+	OW_POWER = 0xEB,
 	OW_BAD_PARSE = 0xEC,
 	OW_BAD_CRC = 0xED,
 	OW_UNKNOWN = 0xEE,

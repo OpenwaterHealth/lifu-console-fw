@@ -64,6 +64,7 @@ static void process_basic_command(UartPacket *uartResp, UartPacket cmd)
 		uartResp->data = cmd.data;
 		break;
 	case OW_CMD_TOGGLE_LED:
+		printf("Toggle LED\r\n");
 		uartResp->id = cmd.id;
 		uartResp->packet_type = cmd.packet_type;
 		uartResp->command = cmd.command;
@@ -78,7 +79,7 @@ static void process_basic_command(UartPacket *uartResp, UartPacket cmd)
 }
 
 
-static void CONTROLLER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
+static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 {
 	switch (cmd.command)
 	{
@@ -110,10 +111,11 @@ static void CONTROLLER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->data = cmd.data;
 			break;
 		case OW_CMD_TOGGLE_LED:
+			printf("Toggle LED\r\n");
 			uartResp->id = cmd.id;
 			uartResp->packet_type = cmd.packet_type;
 			uartResp->command = cmd.command;
-			//HAL_GPIO_TogglePin(HB_LEDn_GPIO_Port, HB_LEDn_Pin); //no led pins declared
+			HAL_GPIO_TogglePin(SYS_RDY_GPIO_Port, SYS_RDY_Pin);
 			break;
 		case OW_CMD_HWID:
 			uartResp->command = OW_CMD_HWID;
@@ -165,9 +167,9 @@ UartPacket process_if_command(UartPacket cmd)
 	case OW_JSON:
 		//JSON_ProcessCommand(&uartResp, cmd);
 		break;
-	case OW_CONTROLLER:
+	case OW_POWER:
 		//process by the USTX Controller
-		CONTROLLER_ProcessCommand(&uartResp, cmd);
+		POWER_ProcessCommand(&uartResp, cmd);
 		break;
 	default:
 		uartResp.data_len = 0;
