@@ -63,6 +63,8 @@ void Error_Handler(void);
 #define V12_ENABLE_GPIO_Port GPIOC
 #define V12_PWR_G_Pin GPIO_PIN_3
 #define V12_PWR_G_GPIO_Port GPIOB
+#define USB_RESET_Pin GPIO_PIN_15
+#define USB_RESET_GPIO_Port GPIOA
 #define SYS_RDY_Pin GPIO_PIN_2
 #define SYS_RDY_GPIO_Port GPIOD
 #define V5B_PWR_G_Pin GPIO_PIN_5
@@ -75,8 +77,10 @@ void Error_Handler(void);
 #define SMBDAT_GPIO_Port GPIOC
 #define HV_ON_Pin GPIO_PIN_0
 #define HV_ON_GPIO_Port GPIOC
-#define HV_REG_DISABLE_Pin GPIO_PIN_8
-#define HV_REG_DISABLE_GPIO_Port GPIOC
+#define SCL_CFG_Pin GPIO_PIN_7
+#define SCL_CFG_GPIO_Port GPIOC
+#define SDA_REM_Pin GPIO_PIN_8
+#define SDA_REM_GPIO_Port GPIOC
 #define TEMP1_Pin GPIO_PIN_2
 #define TEMP1_GPIO_Port GPIOA
 #define CLR_Pin GPIO_PIN_0
@@ -100,6 +104,10 @@ void Error_Handler(void);
 // #define SEMI_HOSTING_ENABLED
 
 extern CRC_HandleTypeDef hcrc;
+extern UART_HandleTypeDef huart3;
+#define DEBUG_UART huart3
+
+extern TIM_HandleTypeDef htim14;
 
 /* USER CODE END Private defines */
 
