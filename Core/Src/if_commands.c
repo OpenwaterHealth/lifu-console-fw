@@ -127,15 +127,16 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->data_len = 16;
 			uartResp->data = (uint8_t *)&id_words;
 			break;
-		case OW_CTRL_SCAN_I2C:
+		case OW_PWR_SET_HV:
+		case OW_PWR_GET_HV:
+		case OW_PWR_HV_ON:
+		case OW_PWR_HV_OFF:
+		case OW_PWR_HV_STATUS:
 			uartResp->id = cmd.id;
-			uartResp->packet_type = cmd.packet_type;
 			uartResp->command = cmd.command;
-			uartResp->addr = cmd.addr;
-			uartResp->reserved = cmd.reserved;
-			//found_address_count = I2C_scan(found_addresses, MAX_FOUND_ADDRESSES, false);
-			//uartResp->data_len = found_address_count;
-			//uartResp->data = found_addresses;
+			uartResp->addr = 0;
+			uartResp->reserved = 0;
+			uartResp->data_len = 0;
 			break;
 		default:
 			uartResp->addr = 0;
