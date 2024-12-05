@@ -149,7 +149,7 @@ int main(void)
   printf("CPU Clock Frequency: %lu MHz\r\n", HAL_RCC_GetSysClockFreq() / 1000000);
 
   // disable power supply
-  HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_RESET);
 
   // reset hub
 
@@ -163,8 +163,8 @@ int main(void)
   // clear dac
   HV_ClearDAC();
 
-  HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, 0x4D00);  //~1.6v
-  HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0x4D00);  //~1.6v
+  HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, 0x0000);  //~1.6v
+  HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0x0000);  //~1.6v
   // SET_DAC_Value(DAC_CHANNEL_VGND, DAC_BIT_12, 0x0000);
   HAL_Delay(250);
 

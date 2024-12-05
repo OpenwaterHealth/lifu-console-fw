@@ -64,11 +64,11 @@ typedef enum {
 } UstxControllerCommands;
 
 typedef enum {
-	OW_PWR_SET_HV = 0x31,
-	OW_PWR_GET_HV = 0x32,
-	OW_PWR_HV_ON = 0x33,
-	OW_PWR_HV_OFF = 0x34,
-	OW_PWR_HV_STATUS = 0x35,
+	OW_POWER_STATUS = 0x30,
+	OW_POWER_SET_HV = 0x31,
+	OW_POWER_GET_HV = 0x32,
+	OW_POWER_HV_ON = 0x33,
+	OW_POWER_HV_OFF = 0x34,
 } UstxPowerCommands;
 
 typedef struct  {

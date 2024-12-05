@@ -9,6 +9,7 @@
 #include "if_commands.h"
 #include "common.h"
 #include "i2c_master.h"
+#include "hv_supply.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -127,11 +128,37 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->data_len = 16;
 			uartResp->data = (uint8_t *)&id_words;
 			break;
-		case OW_PWR_SET_HV:
-		case OW_PWR_GET_HV:
-		case OW_PWR_HV_ON:
-		case OW_PWR_HV_OFF:
-		case OW_PWR_HV_STATUS:
+		case OW_POWER_HV_ON:
+			HV_Enable();
+			uartResp->id = cmd.id;
+			uartResp->command = cmd.command;
+			uartResp->addr = 0;
+			uartResp->reserved = 0;
+			uartResp->data_len = 0;
+			break;
+		case OW_POWER_HV_OFF:
+			HV_Disable();
+			uartResp->id = cmd.id;
+			uartResp->command = cmd.command;
+			uartResp->addr = 0;
+			uartResp->reserved = 0;
+			uartResp->data_len = 0;
+			break;
+		case OW_POWER_SET_HV:
+			if(cmd.data_len == 2)
+			{
+				uint16_t dac_value = ((uint16_t)cmd.data[0] << 8) | (uint16_t)cmd.data[1];
+				HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, dac_value);  //~1.6v
+				HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, dac_value);  //~1.6v
+			}
+			uartResp->id = cmd.id;
+			uartResp->command = cmd.command;
+			uartResp->addr = 0;
+			uartResp->reserved = cmd.reserved;
+			uartResp->data_len = 0;
+			break;
+		case OW_POWER_GET_HV:
+		case OW_POWER_STATUS:
 			uartResp->id = cmd.id;
 			uartResp->command = cmd.command;
 			uartResp->addr = 0;
