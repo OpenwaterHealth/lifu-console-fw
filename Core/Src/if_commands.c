@@ -141,6 +141,9 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 		case OW_CMD_NOP:
 			uartResp->command = OW_CMD_NOP;
 			break;
+		case OW_CMD_RESET:
+			uartResp->command = OW_CMD_RESET;
+			break;
 		default:
 			uartResp->addr = 0;
 			uartResp->reserved = 0;
