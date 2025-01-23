@@ -94,7 +94,6 @@ void HV_Enable(void) {
     HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, current_hvp_val);
     HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, current_hvm_val);
     HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_RESET);
 }
 
 void HV_Disable(void) {
@@ -102,7 +101,6 @@ void HV_Disable(void) {
 	HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_SET);
     HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, 0);
     HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0);
-    HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_SET);
 }
 
 void HV_ClearDAC(void) {

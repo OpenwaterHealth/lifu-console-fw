@@ -85,10 +85,12 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 		case OW_POWER_HV_ON:
 			HV_Enable();
 			uartResp->command = OW_POWER_HV_ON;
+		    HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_RESET);
 			break;
 		case OW_POWER_HV_OFF:
 			HV_Disable();
 			uartResp->command = OW_POWER_HV_OFF;
+		    HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_SET);
 			break;
 		case OW_POWER_SET_HV:
 			uartResp->command = OW_POWER_SET_HV;
