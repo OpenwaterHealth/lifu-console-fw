@@ -71,6 +71,7 @@ typedef enum {
 	OW_POWER_HV_OFF = 0x34,
 	OW_POWER_12V_ON = 0x35,
 	OW_POWER_12V_OFF = 0x36,
+	OW_POWER_GET_RUN_HV = 0x37,
 } UstxPowerCommands;
 
 typedef struct  {

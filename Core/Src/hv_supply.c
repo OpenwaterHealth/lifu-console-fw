@@ -77,18 +77,21 @@ uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t
     return command;
 }
 
-uint32_t HV_SetVoltage(uint16_t value) {
+uint16_t HV_SetVoltage(uint16_t value) {
 	current_hvp_val = value;
 	current_hvm_val = value;
     return value;
 }
 
-uint32_t HV_GetVoltage() {
-	uint32_t value = 0;
-	HV_ReadStatusRegister(&value);
-    return value;
+uint16_t HV_GetVoltage() {
+    return current_hvp_val;
 }
 
+uint16_t HV_GetOnVoltage() {
+	uint32_t value = 0;
+	HV_ReadStatusRegister(&value);
+    return (uint16_t)value;
+}
 
 void HV_Enable(void) {
     HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, current_hvp_val);
