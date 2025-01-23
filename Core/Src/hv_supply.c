@@ -53,7 +53,8 @@ void HV_ReadStatusRegister(uint32_t *status_data) {
 
 uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t value) {
     uint32_t command = 0x0;
-
+    if(value >2500)	// prevent the power supply from blowing a cap
+    	value = 2500;
     switch (bitDepth) {
         case DAC_BIT_12:
             value &= 0x0FFF;
@@ -79,6 +80,12 @@ uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t
 uint32_t HV_SetVoltage(uint16_t value) {
 	current_hvp_val = value;
 	current_hvm_val = value;
+    return value;
+}
+
+uint32_t HV_GetVoltage() {
+	uint32_t value = 0;
+	HV_ReadStatusRegister(&value);
     return value;
 }
 

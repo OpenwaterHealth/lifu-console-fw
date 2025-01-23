@@ -30,72 +30,22 @@ static void print_uart_packet(const UartPacket* packet) {
     printf("\r\n");
 }
 
-static void process_basic_command(UartPacket *uartResp, UartPacket cmd)
-{
-	switch (cmd.command)
-	{
-	case OW_CMD_NOP:
-		uartResp->command = OW_CMD_NOP;
-		break;
-	case OW_CMD_PING:
-		uartResp->command = OW_CMD_PING;
-		break;
-	case OW_CMD_PONG:
-		uartResp->command = OW_CMD_PONG;
-		break;
-	case OW_CMD_VERSION:
-		uartResp->command = OW_CMD_VERSION;
-		uartResp->data_len = sizeof(FIRMWARE_VERSION_DATA);
-		uartResp->data = FIRMWARE_VERSION_DATA;
-		break;
-	case OW_CMD_HWID:
-		uartResp->command = OW_CMD_HWID;
-		id_words[0] = HAL_GetUIDw0();
-		id_words[1] = HAL_GetUIDw1();
-		id_words[2] = HAL_GetUIDw2();
-		uartResp->data_len = 16;
-		uartResp->data = (uint8_t *)&id_words;
-		break;
-	case OW_CMD_ECHO:
-		// exact copy
-		uartResp->id = cmd.id;
-		uartResp->packet_type = cmd.packet_type;
-		uartResp->command = cmd.command;
-		uartResp->data_len = cmd.data_len;
-		uartResp->data = cmd.data;
-		break;
-	case OW_CMD_TOGGLE_LED:
-		printf("Toggle LED\r\n");
-		uartResp->id = cmd.id;
-		uartResp->packet_type = cmd.packet_type;
-		uartResp->command = cmd.command;
-		HAL_GPIO_TogglePin(SYS_RDY_GPIO_Port, SYS_RDY_Pin);
-		break;
-	default:
-		uartResp->data_len = 0;
-		uartResp->packet_type = OW_UNKNOWN;
-		// uartResp.data = (uint8_t*)&cmd.tag;
-		break;
-	}
-}
-
-
 static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 {
 	switch (cmd.command)
 	{
 		case OW_CMD_PING:
-			uartResp->command = cmd.command;
+			uartResp->command = OW_CMD_PING;
 			uartResp->addr = cmd.addr;
 			uartResp->reserved = cmd.reserved;
 			break;
 		case OW_CMD_PONG:
-			uartResp->command = cmd.command;
+			uartResp->command = OW_CMD_PONG;
 			uartResp->addr = cmd.addr;
 			uartResp->reserved = cmd.reserved;
 			break;
 		case OW_CMD_VERSION:
-			uartResp->command = cmd.command;
+			uartResp->command = OW_CMD_VERSION;
 			uartResp->addr = cmd.addr;
 			uartResp->reserved = cmd.reserved;
 			uartResp->data_len = sizeof(FIRMWARE_VERSION_DATA);
@@ -103,7 +53,7 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			break;
 		case OW_CMD_ECHO:
 			// exact copy
-			uartResp->id = cmd.id;
+			uartResp->id = OW_CMD_ECHO;
 			uartResp->packet_type = cmd.packet_type;
 			uartResp->command = cmd.command;
 			uartResp->addr = cmd.addr;
@@ -113,7 +63,7 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			break;
 		case OW_CMD_TOGGLE_LED:
 			printf("Toggle LED\r\n");
-			uartResp->id = cmd.id;
+			uartResp->id = OW_CMD_TOGGLE_LED;
 			uartResp->packet_type = cmd.packet_type;
 			uartResp->command = cmd.command;
 			HAL_GPIO_TogglePin(SYS_RDY_GPIO_Port, SYS_RDY_Pin);
@@ -128,9 +78,27 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->data_len = 16;
 			uartResp->data = (uint8_t *)&id_words;
 			break;
+		case OW_POWER_12V_ON:
+			HV_Enable();
+			uartResp->id = OW_POWER_HV_ON;
+			uartResp->command = cmd.command;
+			uartResp->addr = 0;
+			uartResp->reserved = 0;
+			uartResp->data_len = 0;
+			HAL_GPIO_WritePin(V12_ENABLE_GPIO_Port, V12_ENABLE_Pin, GPIO_PIN_SET);
+			break;
+		case OW_POWER_12V_OFF:
+			HV_Enable();
+			uartResp->id = OW_POWER_12V_OFF;
+			uartResp->command = cmd.command;
+			uartResp->addr = 0;
+			uartResp->reserved = 0;
+			uartResp->data_len = 0;
+			HAL_GPIO_WritePin(V12_ENABLE_GPIO_Port, V12_ENABLE_Pin, GPIO_PIN_RESET);
+			break;
 		case OW_POWER_HV_ON:
 			HV_Enable();
-			uartResp->id = cmd.id;
+			uartResp->id = OW_POWER_HV_ON;
 			uartResp->command = cmd.command;
 			uartResp->addr = 0;
 			uartResp->reserved = 0;
@@ -138,31 +106,40 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			break;
 		case OW_POWER_HV_OFF:
 			HV_Disable();
-			uartResp->id = cmd.id;
+			uartResp->id = OW_POWER_HV_OFF;
 			uartResp->command = cmd.command;
 			uartResp->addr = 0;
 			uartResp->reserved = 0;
 			uartResp->data_len = 0;
 			break;
 		case OW_POWER_SET_HV:
+			uartResp->id = OW_POWER_SET_HV;
+			uartResp->command = cmd.command;
+			uartResp->addr = 0;
+			uartResp->reserved = cmd.reserved;
+			uartResp->data_len = 0;
 			if(cmd.data_len == 2)
 			{
 				uint16_t dac_value = ((uint16_t)cmd.data[0] << 8) | (uint16_t)cmd.data[1];
 				HV_SetVoltage(dac_value);
 			}
-			uartResp->id = cmd.id;
-			uartResp->command = cmd.command;
-			uartResp->addr = 0;
-			uartResp->reserved = cmd.reserved;
-			uartResp->data_len = 0;
 			break;
 		case OW_POWER_GET_HV:
-		case OW_POWER_STATUS:
-			uartResp->id = cmd.id;
+			uartResp->id = OW_POWER_GET_HV;
 			uartResp->command = cmd.command;
 			uartResp->addr = 0;
 			uartResp->reserved = 0;
 			uartResp->data_len = 0;
+			break;
+		case OW_POWER_STATUS:
+			uartResp->id = OW_POWER_STATUS;
+			uartResp->command = cmd.command;
+			uartResp->addr = 0;
+			uartResp->reserved = 0;
+			uartResp->data_len = 0;
+			break;
+		case OW_CMD_NOP:
+			uartResp->command = OW_CMD_NOP;
 			break;
 		default:
 			uartResp->addr = 0;
@@ -188,12 +165,10 @@ UartPacket process_if_command(UartPacket cmd)
 	uartResp.data = 0;
 	switch (cmd.packet_type)
 	{
-	case OW_CMD:
-		process_basic_command(&uartResp, cmd);
-		break;
 	case OW_JSON:
 		//JSON_ProcessCommand(&uartResp, cmd);
 		break;
+	case OW_CMD:
 	case OW_POWER:
 		//process by the USTX Controller
 		POWER_ProcessCommand(&uartResp, cmd);
