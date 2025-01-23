@@ -62,7 +62,7 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 		case OW_CMD_TOGGLE_LED:
 			printf("Toggle LED\r\n");
 			uartResp->command = OW_CMD_TOGGLE_LED;
-			HAL_GPIO_TogglePin(SYS_RDY_GPIO_Port, SYS_RDY_Pin);
+			HAL_GPIO_TogglePin(HB_LED_GPIO_Port, HB_LED_Pin);
 			break;
 		case OW_CMD_HWID:
 			uartResp->command = OW_CMD_HWID;
@@ -75,12 +75,10 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->data = (uint8_t *)&id_words;
 			break;
 		case OW_POWER_12V_ON:
-			HV_Enable();
-			uartResp->command = OW_POWER_HV_ON;
+			uartResp->command = OW_POWER_12V_ON;
 			HAL_GPIO_WritePin(V12_ENABLE_GPIO_Port, V12_ENABLE_Pin, GPIO_PIN_SET);
 			break;
 		case OW_POWER_12V_OFF:
-			HV_Enable();
 			uartResp->command = OW_POWER_12V_OFF;
 			HAL_GPIO_WritePin(V12_ENABLE_GPIO_Port, V12_ENABLE_Pin, GPIO_PIN_RESET);
 			break;
