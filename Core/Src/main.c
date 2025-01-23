@@ -61,6 +61,7 @@ I2C_HandleTypeDef hi2c2;
 SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim14;
+TIM_HandleTypeDef htim17;
 
 UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart3_rx;
@@ -84,6 +85,7 @@ static void MX_I2C2_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM14_Init(void);
+static void MX_TIM17_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -141,6 +143,7 @@ int main(void)
   MX_USB_DEVICE_Init();
   MX_USART3_UART_Init();
   MX_TIM14_Init();
+  MX_TIM17_Init();
   /* USER CODE BEGIN 2 */
 
   init_dma_logging();
@@ -513,6 +516,38 @@ static void MX_TIM14_Init(void)
 }
 
 /**
+  * @brief TIM17 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM17_Init(void)
+{
+
+  /* USER CODE BEGIN TIM17_Init 0 */
+
+  /* USER CODE END TIM17_Init 0 */
+
+  /* USER CODE BEGIN TIM17_Init 1 */
+
+  /* USER CODE END TIM17_Init 1 */
+  htim17.Instance = TIM17;
+  htim17.Init.Prescaler = 48000-1;
+  htim17.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim17.Init.Period = 1000-1;
+  htim17.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim17.Init.RepetitionCounter = 0;
+  htim17.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim17) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM17_Init 2 */
+
+  /* USER CODE END TIM17_Init 2 */
+
+}
+
+/**
   * @brief USART3 Initialization Function
   * @param None
   * @retval None
@@ -703,7 +738,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
+  if (htim->Instance == TIM17) {
+      // Stop the timer to prevent re-triggering
+      HAL_TIM_Base_Stop_IT(htim);
 
+	  // Reset the board
+	  NVIC_SystemReset();
+  }
   /* USER CODE END Callback 1 */
 }
 

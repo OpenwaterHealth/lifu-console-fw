@@ -108,6 +108,7 @@ extern UART_HandleTypeDef huart3;
 #define DEBUG_UART huart3
 
 extern TIM_HandleTypeDef htim14;
+extern TIM_HandleTypeDef htim17;
 
 /* USER CODE END Private defines */
 
