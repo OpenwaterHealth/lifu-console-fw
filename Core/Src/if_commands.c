@@ -16,6 +16,7 @@
 
 extern uint8_t FIRMWARE_VERSION_DATA[3];
 static uint32_t id_words[3] = {0};
+static uint16_t ret_voltage = 0;
 
 static void print_uart_packet(const UartPacket* packet) {
     printf("ID: 0x%04X\r\n", packet->id);
@@ -32,8 +33,6 @@ static void print_uart_packet(const UartPacket* packet) {
 
 static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 {
-	uint16_t ret_data;
-
 	switch (cmd.command)
 	{
 		case OW_CMD_PING:
@@ -107,17 +106,9 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			break;
 		case OW_POWER_GET_HV:
 			uartResp->command = OW_POWER_GET_HV;
-			ret_data = 0;
-			ret_data = HV_GetVoltage();
+			ret_voltage = HV_GetVoltage();
 			uartResp->data_len = 2;
-			uartResp->data=(uint8_t*)&ret_data;
-			break;
-		case OW_POWER_GET_RUN_HV:
-			uartResp->command = OW_POWER_GET_HV;
-			ret_data = 0;
-			ret_data = HV_GetOnVoltage();
-			uartResp->data_len = 2;
-			uartResp->data=(uint8_t*)&ret_data;
+			uartResp->data=(uint8_t*)&ret_voltage;
 			break;
 		case OW_POWER_STATUS:
 			uartResp->command = OW_POWER_STATUS;
