@@ -68,7 +68,7 @@ DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-uint8_t FIRMWARE_VERSION_DATA[3] = {1, 0, 1};
+uint8_t FIRMWARE_VERSION_DATA[3] = {1, 0, 2};
 uint8_t rxBuffer[COMMAND_MAX_SIZE];
 uint8_t txBuffer[COMMAND_MAX_SIZE];
 
@@ -619,10 +619,11 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOF_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, LDAC_Pin|HV_ON_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOC, LDAC_Pin|HV_ON_Pin|LD_B_Pin|LD_R_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, V12_ENABLE_Pin|HV_SHUTDOWN_Pin|SCL_CFG_Pin|SDA_REM_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, V12_ENABLE_Pin|HV_SHUTDOWN_Pin|SCL_CFG_Pin|SDA_REM_Pin
+                          |LD_G_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, USB_RESET_Pin|HB_LED_Pin, GPIO_PIN_RESET);
@@ -637,9 +638,11 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(SYNC_GPIO_Port, SYNC_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pins : LDAC_Pin V12_ENABLE_Pin HV_SHUTDOWN_Pin HV_ON_Pin
-                           SCL_CFG_Pin SDA_REM_Pin */
+                           SCL_CFG_Pin SDA_REM_Pin LD_B_Pin LD_R_Pin
+                           LD_G_Pin */
   GPIO_InitStruct.Pin = LDAC_Pin|V12_ENABLE_Pin|HV_SHUTDOWN_Pin|HV_ON_Pin
-                          |SCL_CFG_Pin|SDA_REM_Pin;
+                          |SCL_CFG_Pin|SDA_REM_Pin|LD_B_Pin|LD_R_Pin
+                          |LD_G_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
