@@ -116,6 +116,8 @@ extern UART_HandleTypeDef huart3;
 extern TIM_HandleTypeDef htim14;
 extern TIM_HandleTypeDef htim17;
 
+#define CDC_TIMER htim14
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

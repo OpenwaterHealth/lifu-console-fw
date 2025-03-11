@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2024 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -22,6 +22,7 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
+#include "main.h"
 #include "uart_comms.h"
 
 /* USER CODE END INCLUDE */
@@ -34,6 +35,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 volatile uint8_t read_to_idle_enabled = 0;
+volatile uint8_t receive_to_idle_cancelled = 0;
 volatile uint16_t rxIndex = 0;
 volatile uint16_t rxMaxSize = 0;
 uint8_t* pRX = 0;
@@ -147,7 +149,8 @@ USBD_CDC_ItfTypeDef USBD_Interface_fops_FS =
   CDC_Init_FS,
   CDC_DeInit_FS,
   CDC_Control_FS,
-  CDC_Receive_FS
+  CDC_Receive_FS,
+  CDC_TransmitCplt_FS
 };
 
 /* Private functions ---------------------------------------------------------*/
@@ -274,21 +277,25 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 
   if(read_to_idle_enabled == 1){
 	  // Restart timer when data is received
-	  HAL_TIM_Base_Stop_IT(&htim14);
-    __HAL_TIM_SET_COUNTER(&htim14, 0); // Reset the timer counter
+	  HAL_TIM_Base_Stop_IT(&CDC_TIMER);
+	__HAL_TIM_SET_COUNTER(&CDC_TIMER, 0); // Reset the timer counter
 
 	  if(pRX){
 		  for (uint32_t i = 0; i < len; i++) {
 			pRX[tempHeadPos] = Buf[i];
-		  	tempHeadPos = (uint16_t)((uint16_t)(tempHeadPos + 1) % rxMaxSize);
+			tempHeadPos = (uint16_t)((uint16_t)(tempHeadPos + 1) % rxMaxSize);
 
-		    if (tempHeadPos == rxIndex) {
-		      return USBD_FAIL;
-		    }
+			if (tempHeadPos == rxIndex) {
+			  return USBD_FAIL;
+			}
 		  }
 	  }
 	  rxIndex = tempHeadPos;
-	  HAL_TIM_Base_Start_IT(&htim14);
+	  HAL_TIM_Base_Start_IT(&CDC_TIMER);
+  }
+
+  if(receive_to_idle_cancelled == 1){
+	  receive_to_idle_cancelled = 0;
   }
 
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
@@ -323,6 +330,18 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
 
+/**
+  * @brief  CDC_TransmitCplt_FS
+  *         Data transmitted callback
+  *
+  *         @note
+  *         This function is IN transfer complete callback used to inform user that
+  *         the submitted Data is successfully sent over USB.
+  *
+  * @param  Buf: Buffer of data to be received
+  * @param  Len: Number of data received (in bytes)
+  * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
+  */
 static int8_t CDC_TransmitCplt_FS(uint8_t *Buf, uint32_t *Len, uint8_t epnum)
 {
   uint8_t result = USBD_OK;
@@ -336,7 +355,7 @@ static int8_t CDC_TransmitCplt_FS(uint8_t *Buf, uint32_t *Len, uint8_t epnum)
 }
 
 void CDC_FlushRxBuffer_FS() {
-
+	USBD_LL_FlushEP(&hUsbDeviceFS, CDC_OUT_EP);
 }
 
 void CDC_ReceiveToIdle(uint8_t* Buf, uint16_t max_size)
@@ -347,11 +366,18 @@ void CDC_ReceiveToIdle(uint8_t* Buf, uint16_t max_size)
 	read_to_idle_enabled = 1;
 }
 
+void CDC_Stop_ReceiveToIdle()
+{
+    receive_to_idle_cancelled = 1;
+	HAL_TIM_Base_Stop_IT(&CDC_TIMER);
+	read_to_idle_enabled = 0;
+}
+
 extern void CDC_handle_RxCpltCallback(uint16_t len);
 void CDC_Idle_Timer_Handler()
 {
 	read_to_idle_enabled = 0;
-	HAL_TIM_Base_Stop_IT(&htim14);
+	HAL_TIM_Base_Stop_IT(&CDC_TIMER);
 
 	if(pRX){
 		// printf("CDC_handle_RxCpltCallback %d \r\n", rxIndex);

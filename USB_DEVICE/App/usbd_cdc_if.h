@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
+
 #ifndef __USBD_CDC_IF_H__
 #define __USBD_CDC_IF_H__
 
@@ -48,13 +49,13 @@
   * @{
   */
 /* Define size for the receive and transmit buffer over CDC */
-#define APP_RX_DATA_SIZE  1024
-#define APP_TX_DATA_SIZE  1024
+#define APP_RX_DATA_SIZE  256
+#define APP_TX_DATA_SIZE  256
 /* USER CODE BEGIN EXPORTED_DEFINES */
 
  void CDC_FlushRxBuffer_FS();
  void CDC_ReceiveToIdle(uint8_t* Buf, uint16_t max_size);
-
+ void CDC_Stop_ReceiveToIdle();
  void CDC_Idle_Timer_Handler();
 
 /* USER CODE END EXPORTED_DEFINES */
@@ -133,4 +134,3 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len);
 #endif
 
 #endif /* __USBD_CDC_IF_H__ */
-
