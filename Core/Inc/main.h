@@ -69,6 +69,10 @@ void Error_Handler(void);
 #define SYS_RDY_GPIO_Port GPIOD
 #define V5B_PWR_G_Pin GPIO_PIN_5
 #define V5B_PWR_G_GPIO_Port GPIOB
+#define SYS_EN_Pin GPIO_PIN_12
+#define SYS_EN_GPIO_Port GPIOC
+#define LED_ON_Pin GPIO_PIN_10
+#define LED_ON_GPIO_Port GPIOA
 #define SMBCLK_Pin GPIO_PIN_8
 #define SMBCLK_GPIO_Port GPIOA
 #define HV_SHUTDOWN_Pin GPIO_PIN_9
@@ -87,6 +91,10 @@ void Error_Handler(void);
 #define CLR_GPIO_Port GPIOB
 #define LD_B_Pin GPIO_PIN_6
 #define LD_B_GPIO_Port GPIOC
+#define GPIO4_Pin GPIO_PIN_15
+#define GPIO4_GPIO_Port GPIOB
+#define GPIO3_Pin GPIO_PIN_14
+#define GPIO3_GPIO_Port GPIOB
 #define HV_P_Pin GPIO_PIN_0
 #define HV_P_GPIO_Port GPIOA
 #define TEMP2_Pin GPIO_PIN_3
@@ -95,6 +103,8 @@ void Error_Handler(void);
 #define V5A_PWR_G_GPIO_Port GPIOB
 #define PWR_G_Pin GPIO_PIN_2
 #define PWR_G_GPIO_Port GPIOB
+#define GPIO2_Pin GPIO_PIN_13
+#define GPIO2_GPIO_Port GPIOB
 #define HB_LED_Pin GPIO_PIN_1
 #define HB_LED_GPIO_Port GPIOA
 #define SYNC_Pin GPIO_PIN_4

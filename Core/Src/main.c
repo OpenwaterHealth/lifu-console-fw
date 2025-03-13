@@ -68,7 +68,7 @@ DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-uint8_t FIRMWARE_VERSION_DATA[3] = {1, 0, 3};
+uint8_t FIRMWARE_VERSION_DATA[3] = {1, 0, 4};
 uint8_t rxBuffer[COMMAND_MAX_SIZE];
 uint8_t txBuffer[COMMAND_MAX_SIZE];
 
@@ -152,7 +152,11 @@ int main(void)
   printf("CPU Clock Frequency: %lu MHz\r\n", HAL_RCC_GetSysClockFreq() / 1000000);
 
   // disable power supply
-  HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_SET);
+  HV_Disable();
+  // clear dac
+  HV_ClearDAC();
+
+  System_Enable();
 
   // reset hub
 
@@ -163,23 +167,16 @@ int main(void)
   // I2C_scan(&hi2c1);  // 0x49
   // I2C_scan(&hi2c2);  // 0x6D
 
-  // clear dac
-  HV_ClearDAC();
-
-  HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, 0);  //~1.6v
-  HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0);  //~1.6v
-  // SET_DAC_Value(DAC_CHANNEL_VGND, DAC_BIT_12, 0x0000);
-  HAL_Delay(250);
 
   // bring usb hub out of reset
   HAL_GPIO_WritePin(USB_RESET_GPIO_Port, USB_RESET_Pin, GPIO_PIN_SET);
+  HAL_Delay(250);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   printf("\r\nController initialize and running\r\n");
-  HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(SYS_RDY_GPIO_Port, SYS_RDY_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(HB_LED_GPIO_Port, HB_LED_Pin, GPIO_PIN_SET);
 
@@ -622,11 +619,11 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, LDAC_Pin|HV_ON_Pin|LD_B_Pin|LD_R_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, V12_ENABLE_Pin|HV_SHUTDOWN_Pin|SCL_CFG_Pin|SDA_REM_Pin
-                          |LD_G_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, V12_ENABLE_Pin|SYS_EN_Pin|HV_SHUTDOWN_Pin|SCL_CFG_Pin
+                          |SDA_REM_Pin|LD_G_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, USB_RESET_Pin|HB_LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, USB_RESET_Pin|LED_ON_Pin|HB_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SYS_RDY_GPIO_Port, SYS_RDY_Pin, GPIO_PIN_RESET);
@@ -637,25 +634,27 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SYNC_GPIO_Port, SYNC_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pins : LDAC_Pin V12_ENABLE_Pin HV_SHUTDOWN_Pin HV_ON_Pin
-                           SCL_CFG_Pin SDA_REM_Pin LD_B_Pin LD_R_Pin
-                           LD_G_Pin */
-  GPIO_InitStruct.Pin = LDAC_Pin|V12_ENABLE_Pin|HV_SHUTDOWN_Pin|HV_ON_Pin
-                          |SCL_CFG_Pin|SDA_REM_Pin|LD_B_Pin|LD_R_Pin
-                          |LD_G_Pin;
+  /*Configure GPIO pins : LDAC_Pin V12_ENABLE_Pin SYS_EN_Pin HV_SHUTDOWN_Pin
+                           HV_ON_Pin SCL_CFG_Pin SDA_REM_Pin LD_B_Pin
+                           LD_R_Pin LD_G_Pin */
+  GPIO_InitStruct.Pin = LDAC_Pin|V12_ENABLE_Pin|SYS_EN_Pin|HV_SHUTDOWN_Pin
+                          |HV_ON_Pin|SCL_CFG_Pin|SDA_REM_Pin|LD_B_Pin
+                          |LD_R_Pin|LD_G_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : V12_PWR_G_Pin V5B_PWR_G_Pin V5A_PWR_G_Pin PWR_G_Pin */
-  GPIO_InitStruct.Pin = V12_PWR_G_Pin|V5B_PWR_G_Pin|V5A_PWR_G_Pin|PWR_G_Pin;
+  /*Configure GPIO pins : V12_PWR_G_Pin V5B_PWR_G_Pin GPIO4_Pin GPIO3_Pin
+                           V5A_PWR_G_Pin PWR_G_Pin GPIO2_Pin */
+  GPIO_InitStruct.Pin = V12_PWR_G_Pin|V5B_PWR_G_Pin|GPIO4_Pin|GPIO3_Pin
+                          |V5A_PWR_G_Pin|PWR_G_Pin|GPIO2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : USB_RESET_Pin HB_LED_Pin SYNC_Pin */
-  GPIO_InitStruct.Pin = USB_RESET_Pin|HB_LED_Pin|SYNC_Pin;
+  /*Configure GPIO pins : USB_RESET_Pin LED_ON_Pin HB_LED_Pin SYNC_Pin */
+  GPIO_InitStruct.Pin = USB_RESET_Pin|LED_ON_Pin|HB_LED_Pin|SYNC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -686,14 +685,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(CLR_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PB15 PB14 PB13 */
-  GPIO_InitStruct.Pin = GPIO_PIN_15|GPIO_PIN_14|GPIO_PIN_13;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF0_SPI2;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : GPIO1_Pin */
   GPIO_InitStruct.Pin = GPIO1_Pin;

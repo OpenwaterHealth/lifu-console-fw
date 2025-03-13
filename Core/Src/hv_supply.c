@@ -97,6 +97,8 @@ void HV_Enable(void) {
     HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, current_hvp_val);
     HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, current_hvm_val);
     HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_RESET);
+
+    HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_RESET);
 }
 
 void HV_Disable(void) {
@@ -104,6 +106,8 @@ void HV_Disable(void) {
 	HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_SET);
     HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, 0);
     HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0);
+
+    HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_SET);
 }
 
 void HV_ClearDAC(void) {
@@ -114,4 +118,50 @@ void HV_ClearDAC(void) {
     HAL_Delay(250);
     HAL_GPIO_WritePin(CLR_GPIO_Port, CLR_Pin, GPIO_PIN_SET);
     HAL_Delay(250);
+}
+
+void V12_Enable(void)
+{
+    HAL_GPIO_WritePin(V12_ENABLE_GPIO_Port, V12_ENABLE_Pin, GPIO_PIN_RESET);
+}
+
+void V12_Disable(void)
+{
+    HAL_GPIO_WritePin(V12_ENABLE_GPIO_Port, V12_ENABLE_Pin, GPIO_PIN_SET);
+}
+
+void System_Enable(void)
+{
+    HAL_GPIO_WritePin(SYS_EN_GPIO_Port, SYS_EN_Pin, GPIO_PIN_SET);
+}
+
+void System_Disable(void)
+{
+    HAL_GPIO_WritePin(SYS_EN_GPIO_Port, SYS_EN_Pin, GPIO_PIN_RESET);
+}
+
+bool getHVOnStatus()
+{
+    GPIO_PinState pinState = HAL_GPIO_ReadPin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin);
+
+    if (pinState == GPIO_PIN_SET) {
+        // Pin is HIGH
+        return false;
+    } else {
+        // Pin is LOW
+        return true;
+    }
+}
+
+bool get12VOnStatus()
+{
+    GPIO_PinState pinState = HAL_GPIO_ReadPin(V12_ENABLE_GPIO_Port, V12_ENABLE_Pin);
+
+    if (pinState == GPIO_PIN_SET) {
+        // Pin is HIGH
+        return false;
+    } else {
+        // Pin is LOW
+        return true;
+    }
 }

@@ -18,6 +18,12 @@ extern uint8_t FIRMWARE_VERSION_DATA[3];
 static uint32_t id_words[3] = {0};
 static uint16_t ret_voltage = 0;
 
+volatile float last_temperature1 = 0;
+volatile float last_temperature2 = 0;
+volatile uint8_t last_btFan_speed = 0;
+volatile uint8_t last_tpFan_speed = 0;
+volatile uint8_t rgb_state = 0; // 0 = off, 1 == RED, 2 == GREEN, 3 == BLUE
+
 static void print_uart_packet(const UartPacket* packet) {
     printf("ID: 0x%04X\r\n", packet->id);
     printf("Packet Type: 0x%02X\r\n", packet->packet_type);
@@ -112,6 +118,89 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			break;
 		case OW_POWER_STATUS:
 			uartResp->command = OW_POWER_STATUS;
+			break;
+		case OW_POWER_GET_TEMP1:
+			last_temperature1 = 30.0f + (rand() % 41);  // Random float between 30.0 and 70.0
+			uartResp->command = OW_POWER_GET_TEMP1;
+			uartResp->data_len = 4;
+			uartResp->data = (uint8_t *)&last_temperature1;
+			break;
+		case OW_POWER_GET_TEMP2:
+			last_temperature2 = 30.0f + (rand() % 41);  // Random float between 30.0 and 70.0
+			uartResp->command = OW_POWER_GET_TEMP2;
+			uartResp->data_len = 4;
+			uartResp->data = (uint8_t *)&last_temperature2;		
+			break;
+		case OW_POWER_SET_FAN:
+			uartResp->command = OW_POWER_SET_FAN;
+			if(cmd.addr == 0){
+				last_btFan_speed = cmd.data[0];
+			}
+			else if(cmd.addr == 1){
+				last_tpFan_speed = cmd.data[0];
+			}else{
+				uartResp->packet_type = OW_ERROR;
+				uartResp->data_len = 0;
+				uartResp->data = NULL;
+			}
+
+			break;
+		case OW_POWER_GET_FAN:
+			uartResp->command = OW_POWER_GET_FAN;
+			if(cmd.addr == 0){
+				uartResp->data_len = 1;
+				uartResp->data = (uint8_t *)&last_btFan_speed;
+			}
+			else if(cmd.addr == 1){
+				uartResp->data_len = 1;
+				uartResp->data = (uint8_t *)&last_tpFan_speed;
+			}else{
+				uartResp->packet_type = OW_ERROR;
+				uartResp->data_len = 0;
+				uartResp->data = NULL;
+			}
+
+			break;
+		case OW_POWER_SET_RGB:
+			uartResp->command = OW_POWER_SET_RGB;
+			if(uartResp->reserved > 3){
+				uartResp->packet_type = OW_ERROR;
+				uartResp->data_len = 0;
+				uartResp->data = NULL;
+			}
+			else
+			{
+				rgb_state = cmd.reserved;
+			}
+			break;
+		case OW_POWER_GET_RGB:
+			uartResp->command = OW_POWER_GET_RGB;
+			uartResp->reserved = rgb_state;
+			break;
+		case OW_POWER_GET_HVON:
+			uartResp->command = OW_POWER_GET_HVON;
+			if(getHVOnStatus())
+			{
+				printf("OW_POWER_GET_HVON ON\r\n");
+				uartResp->reserved = 1;
+			}
+			else
+			{
+				printf("OW_POWER_GET_HVON OFF\r\n");
+				uartResp->reserved = 0;
+			}
+
+			break;
+		case OW_POWER_GET_12VON:
+			uartResp->command = OW_POWER_GET_12VON;
+			if(get12VOnStatus()){
+				printf("OW_POWER_GET_12VON ON\r\n");
+				uartResp->reserved = 1;
+			}else{
+				printf("OW_POWER_GET_12VON OFF\r\n");
+				uartResp->reserved = 0;
+			}
+
 			break;
 		case OW_CMD_NOP:
 			uartResp->command = OW_CMD_NOP;

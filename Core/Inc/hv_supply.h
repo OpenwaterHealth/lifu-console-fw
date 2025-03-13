@@ -9,6 +9,7 @@
 #define HV_SUPPLY_MANAGER_H
 
 #include "main.h"
+#include <stdbool.h>
 
 // Enum for DAC Channels
 typedef enum {
@@ -34,5 +35,11 @@ uint16_t HV_GetOnVoltage();
 void HV_Enable(void);
 void HV_Disable(void);
 void HV_ClearDAC(void);
+void V12_Enable(void);
+void V12_Disable(void);
+bool getHVOnStatus();
+bool get12VOnStatus();
+void System_Disable(void);
+void System_Enable(void);
 
 #endif // HV_SUPPLY_MANAGER_H
