@@ -140,7 +140,6 @@ int main(void)
   MX_I2C1_Init();
   MX_I2C2_Init();
   MX_SPI1_Init();
-  MX_USB_DEVICE_Init();
   MX_USART3_UART_Init();
   MX_TIM14_Init();
   MX_TIM17_Init();
@@ -170,7 +169,9 @@ int main(void)
 
   // bring usb hub out of reset
   HAL_GPIO_WritePin(USB_RESET_GPIO_Port, USB_RESET_Pin, GPIO_PIN_SET);
-  HAL_Delay(250);
+  HAL_Delay(300);
+
+  MX_USB_DEVICE_Init();
 
   /* USER CODE END 2 */
 
@@ -711,6 +712,16 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 	}
 }
 
+void delay_ms(uint32_t ms)
+{
+	printf("Clock: %ld\r\n", SystemCoreClock);
+    uint32_t delay_cycles = (SystemCoreClock / 1000) * ms;
+    while (delay_cycles--) {
+        __NOP();  // Ensures the loop doesn't get optimized away
+    }
+}
+
+
 /* USER CODE END 4 */
 
 /**
@@ -738,6 +749,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   if (htim->Instance == TIM17) {
       // Stop the timer to prevent re-triggering
       HAL_TIM_Base_Stop_IT(htim);
+
+      MX_USB_DEVICE_DeInit();
+
+      delay_ms(200);
 
 	  // Reset the board
 	  NVIC_SystemReset();
