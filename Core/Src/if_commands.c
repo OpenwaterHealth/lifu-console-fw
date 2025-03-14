@@ -13,6 +13,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>  // For rand() and srand()
+#include <time.h>    // For seeding random number generator
 
 extern uint8_t FIRMWARE_VERSION_DATA[3];
 static uint32_t id_words[3] = {0};
