@@ -69,7 +69,6 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->data = cmd.data;
 			break;
 		case OW_CMD_TOGGLE_LED:
-			printf("Toggle LED\r\n");
 			uartResp->command = OW_CMD_TOGGLE_LED;
 			HAL_GPIO_TogglePin(HB_LED_GPIO_Port, HB_LED_Pin);
 			break;
@@ -183,12 +182,10 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->command = OW_POWER_GET_HVON;
 			if(getHVOnStatus())
 			{
-				printf("OW_POWER_GET_HVON ON\r\n");
 				uartResp->reserved = 1;
 			}
 			else
 			{
-				printf("OW_POWER_GET_HVON OFF\r\n");
 				uartResp->reserved = 0;
 			}
 
@@ -196,10 +193,8 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 		case OW_POWER_GET_12VON:
 			uartResp->command = OW_POWER_GET_12VON;
 			if(get12VOnStatus()){
-				printf("OW_POWER_GET_12VON ON\r\n");
 				uartResp->reserved = 1;
 			}else{
-				printf("OW_POWER_GET_12VON OFF\r\n");
 				uartResp->reserved = 0;
 			}
 

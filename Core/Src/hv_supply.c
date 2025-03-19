@@ -159,9 +159,9 @@ bool get12VOnStatus()
 
     if (pinState == GPIO_PIN_SET) {
         // Pin is HIGH
-        return false;
+        return true;
     } else {
         // Pin is LOW
-        return true;
+        return false;
     }
 }
