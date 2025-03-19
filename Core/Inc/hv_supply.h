@@ -13,10 +13,10 @@
 
 // Enum for DAC Channels
 typedef enum {
-    DAC_CHANNEL_HVP = 0,   // channel A
-    DAC_CHANNEL_HVM = 1,   // channel B
-    DAC_CHANNEL_VGND = 2,  // channel C
-    DAC_CHANNEL_D
+    DAC_CHANNEL_HVP = 0,   		// channel A
+    DAC_CHANNEL_HVM = 1,   		// channel B
+    DAC_CHANNEL_HVP_REG = 2,  	// channel C
+    DAC_CHANNEL_HVM_REG = 3		// channel D
 } DAC_Channel_t;
 
 // Enum for DAC Bit Depth

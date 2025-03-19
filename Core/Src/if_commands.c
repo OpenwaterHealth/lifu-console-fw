@@ -17,6 +17,10 @@
 #include <time.h>    // For seeding random number generator
 
 extern uint8_t FIRMWARE_VERSION_DATA[3];
+
+extern MAX31875_Init_t temp_sensor_1;
+extern MAX31875_Init_t temp_sensor_2;
+
 static uint32_t id_words[3] = {0};
 static uint16_t ret_voltage = 0;
 
@@ -121,13 +125,15 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->command = OW_POWER_STATUS;
 			break;
 		case OW_POWER_GET_TEMP1:
-			last_temperature1 = 30.0f + (rand() % 41);  // Random float between 30.0 and 70.0
+			// last_temperature1 = 30.0f + (rand() % 41);  // Random float between 30.0 and 70.0
+			last_temperature1 = MAX31875_Get_Temp(&temp_sensor_1);
 			uartResp->command = OW_POWER_GET_TEMP1;
 			uartResp->data_len = 4;
 			uartResp->data = (uint8_t *)&last_temperature1;
 			break;
 		case OW_POWER_GET_TEMP2:
-			last_temperature2 = 30.0f + (rand() % 41);  // Random float between 30.0 and 70.0
+			// last_temperature2 = 30.0f + (rand() % 41);  // Random float between 30.0 and 70.0
+			last_temperature1 = MAX31875_Get_Temp(&temp_sensor_2);
 			uartResp->command = OW_POWER_GET_TEMP2;
 			uartResp->data_len = 4;
 			uartResp->data = (uint8_t *)&last_temperature2;		

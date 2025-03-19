@@ -72,6 +72,9 @@ uint8_t FIRMWARE_VERSION_DATA[3] = {1, 0, 4};
 uint8_t rxBuffer[COMMAND_MAX_SIZE];
 uint8_t txBuffer[COMMAND_MAX_SIZE];
 
+MAX31875_Init_t temp_sensor_1;
+MAX31875_Init_t temp_sensor_2;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -154,6 +157,27 @@ int main(void)
   HV_Disable();
   // clear dac
   HV_ClearDAC();
+
+  // Temperature Sensor 1 Configuration
+  temp_sensor_1.conversionRate = MAX31875_CONVERSIONRATE_1;
+  temp_sensor_1.shutDown = MAX31875_SHUTDOWN_OFF;
+  temp_sensor_1.timeOut = MAX31875_TIMEOUT_ENABLE;
+  temp_sensor_1.resolution = MAX31875_RESOLUTION_12;
+  temp_sensor_1.dataFormat = MAX31875_DATAFORMAT_NORMAL;
+  temp_sensor_1.dev_address = MAX31875_TEMP1_DEV_ADDR;
+
+  MAX31875_Init(&temp_sensor_2);
+
+  // Temperature Sensor 1 Configuration
+  temp_sensor_2.conversionRate = MAX31875_CONVERSIONRATE_1;
+  temp_sensor_2.shutDown = MAX31875_SHUTDOWN_OFF;
+  temp_sensor_2.timeOut = MAX31875_TIMEOUT_ENABLE;
+  temp_sensor_2.resolution = MAX31875_RESOLUTION_12;
+  temp_sensor_2.dataFormat = MAX31875_DATAFORMAT_NORMAL;
+  temp_sensor_2.dev_address = MAX31875_TEMP2_DEV_ADDR;
+
+  MAX31875_Init(&temp_sensor_2);
+
 
   System_Enable();
 

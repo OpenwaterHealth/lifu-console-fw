@@ -13,7 +13,9 @@
 #include <string.h>
 
 /* Define Device Address */
-#define MAX31875_DEV_ADDR 				0x90			// slave address
+#define MAX31875_TEMP1_DEV_ADDR 				0x90			// slave address
+
+#define MAX31875_TEMP2_DEV_ADDR 				0x92			// slave address
 
 /* Define registers address */
 #define MAX31875_TEMP_REG_ADDR 				0x00			// temperature register address
@@ -50,26 +52,26 @@
 #define MAX31875_DATAFORMAT_EXTENDED			((uint8_t)0x80)		/* Extended mode */
 
 /* Init Struct */
-typedef struct						// structure declaration for configuration
-{							// use typedef for rename this structure into 'MAX31875_Init_t'
-	uint8_t conversionRate;
-	uint8_t shutDown;
-	uint8_t timeOut;
-	uint8_t resolution;
-	uint8_t dataFormat;
-}MAX31875_Init_t;
+typedef struct {
+    uint8_t conversionRate;
+    uint8_t shutDown;
+    uint8_t timeOut;
+    uint8_t resolution;
+    uint8_t dataFormat;
+    uint16_t dev_address;
+} MAX31875_Init_t;
 
 /* Write Function (MAX31875_Write_Reg)*/
-void MAX31875_Write_Reg(uint8_t reg, uint8_t *dataW, uint8_t size);
+void MAX31875_Write_Reg(uint16_t DevAddress, uint8_t reg, uint8_t *dataW, uint8_t size);
 
 /* Read Function (MAX31875_Read_Reg)*/
-void MAX31875_Read_Reg(uint8_t reg, uint8_t *dataR, uint8_t size);
+void MAX31875_Read_Reg(uint16_t DevAddress, uint8_t reg, uint8_t *dataR, uint8_t size);
 
 /* Init Function (MAX31875_Init)*/
-void MAX31875_Init(I2C_HandleTypeDef *tempI2C, MAX31875_Init_t *tempInitDef);
+void MAX31875_Init(MAX31875_Init_t *tempInitDef);
 
 /* Get Temperature (MAX31875_Get_Temp)*/
-float MAX31875_Get_Temp(void);
+float MAX31875_Get_Temp(MAX31875_Init_t *tempInitDef);
 
 
 #endif /* INC_MAX31875_H_ */

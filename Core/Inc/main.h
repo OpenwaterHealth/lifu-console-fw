@@ -28,6 +28,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f0xx_hal.h"
+#include "MAX31875.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -127,6 +128,13 @@ extern TIM_HandleTypeDef htim14;
 extern TIM_HandleTypeDef htim17;
 
 #define CDC_TIMER htim14
+
+extern I2C_HandleTypeDef hi2c1;
+extern I2C_HandleTypeDef hi2c2;
+
+#define LOCAL_I2C_HANDLE hi2c1
+#define SYNC_I2C_HANDLE hi2c2
+
 
 /* USER CODE END Private defines */
 

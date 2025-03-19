@@ -7,8 +7,7 @@
 
 #include "MAX31875.h"
 
-
-static I2C_HandleTypeDef tempI2C_Handle;											// declaration of static variable
+										// declaration of static variable
 static bool extended_Enable = false;												// declaration & initialization of static boolean variable
 //static uint8_t oneShot = MAX31875_ONESHOT_ENABLE;
 
@@ -16,24 +15,23 @@ static bool extended_Enable = false;												// declaration & initialization 
 const float convertion_temp_table[12] = {0.0625f, 0.125f, 0.25f, 0.5f, 1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f, 64.0f, 128.0f};
 
 /* MAX31875 Write Reg */
-void MAX31875_Write_Reg(uint8_t reg, uint8_t *dataW, uint8_t size)								// use into MAX31875_Init function
+void MAX31875_Write_Reg(uint16_t DevAddress, uint8_t reg, uint8_t *dataW, uint8_t size)								// use into MAX31875_Init function
 {
 	dataW[0]= reg;														// add register address in the first case of dataW array
-	HAL_I2C_Master_Transmit(&tempI2C_Handle, MAX31875_DEV_ADDR, dataW, size, 10);						// transmit dataW array
+	HAL_I2C_Master_Transmit(&LOCAL_I2C_HANDLE, DevAddress, dataW, size, 10);						// transmit dataW array
 }
 
 /* MAX31875 Read Reg */
-void MAX31875_Read_Reg(uint8_t reg, uint8_t *dataR, uint8_t size)								// use into MAX31875_Get_Temp function
+void MAX31875_Read_Reg(uint16_t DevAddress, uint8_t reg, uint8_t *dataR, uint8_t size)								// use into MAX31875_Get_Temp function
 {
-	HAL_I2C_Master_Transmit(&tempI2C_Handle, MAX31875_DEV_ADDR, &reg, 1, 10);						// send register Address
-	HAL_I2C_Master_Receive(&tempI2C_Handle, MAX31875_DEV_ADDR, dataR, size, 10);						// receive dataR from Register
+	HAL_I2C_Master_Transmit(&LOCAL_I2C_HANDLE, DevAddress, &reg, 1, 10);						// send register Address
+	HAL_I2C_Master_Receive(&LOCAL_I2C_HANDLE, DevAddress, dataR, size, 10);						// receive dataR from Register
 }
 
 /* Init Function */
-void MAX31875_Init(I2C_HandleTypeDef *tempI2C, MAX31875_Init_t *tempInitDef)
+void MAX31875_Init(MAX31875_Init_t *tempInitDef)
 {
 	uint8_t I2CData[3] = {0};													// declaration of uint8 data array
-	memcpy(&tempI2C_Handle, tempI2C, sizeof(*tempI2C));									// copy data from memory area tempI2C to memory area tempI2C_Handle
 
 	/* Configuration register */
 	// Set configuration register settings value for upper byte								// used logical AND for mask data
@@ -45,7 +43,7 @@ void MAX31875_Init(I2C_HandleTypeDef *tempI2C, MAX31875_Init_t *tempInitDef)
 	I2CData[2] |= (tempInitDef-> resolution & 0x60);
 	I2CData[2] |= (tempInitDef-> dataFormat & 0x80);
 
-	MAX31875_Write_Reg(MAX31875_CONF_REG_ADDR, I2CData, 3);									// call MAX31875 Write function
+	MAX31875_Write_Reg(tempInitDef->dev_address, MAX31875_CONF_REG_ADDR, I2CData, 3);									// call MAX31875 Write function
 
 	/*
 	if (tempInitDef->shutDown == MAX31875_SHUTDOWN_ON)
@@ -61,13 +59,13 @@ void MAX31875_Init(I2C_HandleTypeDef *tempI2C, MAX31875_Init_t *tempInitDef)
 }
 
 /* Get Temperature */
-float MAX31875_Get_Temp(void)
+float MAX31875_Get_Temp(MAX31875_Init_t *tempInitDef)
 {
 	float tempData = 0.0f;
 	uint8_t var[2];
 	uint16_t data = 0;
 
-	MAX31875_Read_Reg(MAX31875_TEMP_REG_ADDR, var, 2);									// call MAX31875 Read function
+	MAX31875_Read_Reg(tempInitDef->dev_address, MAX31875_TEMP_REG_ADDR, var, 2);									// call MAX31875 Read function
 
 	data = (var[0] << 8) | var[1];
 

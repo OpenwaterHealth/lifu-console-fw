@@ -8,6 +8,8 @@
 
 #include "hv_supply.h"
 
+#include <stdio.h>
+
 static uint16_t current_hvp_val = 0;
 static uint16_t current_hvm_val = 0;
 
@@ -94,8 +96,16 @@ uint16_t HV_GetOnVoltage() {
 }
 
 void HV_Enable(void) {
+	printf("set HVP DAC %d\r\n", current_hvp_val);
+	printf("set HVP REG DAC %d\r\n", current_hvp_val);
+
+	printf("set HVM REG DAC %d\r\n", current_hvm_val);
+	printf("set HVM REG DAC %d\r\n", current_hvm_val);
+
     HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, current_hvp_val);
+    HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, current_hvp_val);
     HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, current_hvm_val);
+    HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, current_hvm_val);
     HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_RESET);
 
     HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_RESET);
@@ -104,6 +114,8 @@ void HV_Enable(void) {
 void HV_Disable(void) {
 
 	HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_SET);
+    HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, 0);
+    HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, 0);
     HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, 0);
     HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0);
 
