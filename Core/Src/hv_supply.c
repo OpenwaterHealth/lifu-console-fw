@@ -10,8 +10,14 @@
 
 #include <stdio.h>
 
+#define DAC_MAX_VALUE 4095
+#define STEP_SIZE 50
+#define PAUSE_DURATION_MS 150  // 500ms pause every STEP_SIZE
+
 static uint16_t current_hvp_val = 0;
 static uint16_t current_hvm_val = 0;
+static uint16_t current_hvp_reg = 0;
+static uint16_t current_hvm_reg = 0;
 
 extern SPI_HandleTypeDef hspi1;
 
@@ -85,6 +91,27 @@ uint16_t HV_SetVoltage(uint16_t value) {
     return value;
 }
 
+uint16_t set_hvm(uint16_t value) {
+	current_hvm_val = value;
+    return value;
+}
+
+uint16_t set_hvp(uint16_t value) {
+	current_hvp_val = value;
+    return value;
+}
+
+uint16_t set_hrm(uint16_t value) {
+	current_hvm_reg = value;
+    return value;
+}
+
+uint16_t set_hrp(uint16_t value) {
+	current_hvp_reg = value;
+    return value;
+}
+
+
 uint16_t HV_GetVoltage() {
     return current_hvp_val;
 }
@@ -96,17 +123,56 @@ uint16_t HV_GetOnVoltage() {
 }
 
 void HV_Enable(void) {
+    uint16_t set_hvp_val = 0;
+    uint16_t set_hvm_val = 0;
+    uint16_t set_hvp_reg = 0;
+    uint16_t set_hvm_reg = 0;
+
+
 	printf("set HVP DAC %d\r\n", current_hvp_val);
-	printf("set HVP REG DAC %d\r\n", current_hvp_val);
+	printf("set HVP REG DAC %d\r\n", current_hvp_reg);
 
-	printf("set HVM REG DAC %d\r\n", current_hvm_val);
-	printf("set HVM REG DAC %d\r\n", current_hvm_val);
+	printf("set HVM DAC %d\r\n", current_hvm_val);
+	printf("set HVM REG DAC %d\r\n", current_hvm_reg);
 
-    HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, current_hvp_val);
-    HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, current_hvp_val);
-    HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, current_hvm_val);
-    HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, current_hvm_val);
+    HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, 0);
+    HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, 0);
+    HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, 0);
+    HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0);
+
     HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_RESET);
+
+    do{
+
+        // Increment
+    	set_hvp_val = set_hvp_val + STEP_SIZE;
+    	set_hvm_val = set_hvm_val + STEP_SIZE;
+
+    	if(set_hvp_val >= current_hvp_val) set_hvp_val = current_hvp_val;
+    	if(set_hvm_val >= current_hvm_val) set_hvm_val = current_hvm_val;
+    	printf("set HVP: %d, HVM: %d\r\n", set_hvp_val, set_hvm_val);
+        HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, set_hvp_val);
+        HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, set_hvm_val);
+
+        HAL_Delay(PAUSE_DURATION_MS);
+
+    }while (set_hvp_val < current_hvp_val || set_hvm_val < current_hvm_val);
+
+    do{
+
+        // Increment
+    	set_hvp_reg = set_hvp_reg + STEP_SIZE;
+    	set_hvm_reg = set_hvm_reg + STEP_SIZE;
+
+    	if(set_hvp_reg >= current_hvp_reg) set_hvp_reg = current_hvp_reg;
+    	if(set_hvm_reg >= current_hvm_reg) set_hvm_reg = current_hvm_reg;
+    	printf("set REG HVP: %d, HVM: %d\r\n", set_hvp_reg, set_hvm_reg);
+        HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, set_hvp_reg);
+        HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, set_hvm_reg);
+
+        HAL_Delay(PAUSE_DURATION_MS);
+
+    }while (set_hvp_reg < current_hvm_reg || set_hvm_reg < current_hvp_reg);
 
     HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_RESET);
 }

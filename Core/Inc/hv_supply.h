@@ -41,5 +41,9 @@ bool getHVOnStatus();
 bool get12VOnStatus();
 void System_Disable(void);
 void System_Enable(void);
+uint16_t set_hvm(uint16_t value);
+uint16_t set_hvp(uint16_t value);
+uint16_t set_hrm(uint16_t value);
+uint16_t set_hrp(uint16_t value);
 
 #endif // HV_SUPPLY_MANAGER_H

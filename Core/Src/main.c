@@ -108,15 +108,6 @@ int main(void)
 
   /* USER CODE BEGIN 1 */
 
-#ifdef SEMI_HOSTING_ENABLED
-  initialise_monitor_handles();
-
-  char s[50];
-  char *p;
-  FILE *fp;
-  p=s;
-
-#endif
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
