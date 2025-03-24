@@ -61,8 +61,8 @@ void HV_ReadStatusRegister(uint32_t *status_data) {
 
 uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t value) {
     uint32_t command = 0x0;
-    if(value >2500)	// prevent the power supply from blowing a cap
-    	value = 2500;
+    if(value >4095)	// prevent the power supply from blowing a cap
+    	value = 4095;
     switch (bitDepth) {
         case DAC_BIT_12:
             value &= 0x0FFF;
@@ -128,6 +128,9 @@ void HV_Enable(void) {
     uint16_t set_hrp_val = 0;
     uint16_t set_hrm_val = 0;
 
+    uint32_t last_hvm_val = 0;
+    uint32_t last_hvp_val = 0;
+
 
 	printf("set HVP DAC %d\r\n", current_hvp_val);
 	printf("set HVP REG DAC %d\r\n", current_hrp_val);
@@ -150,8 +153,8 @@ void HV_Enable(void) {
 
     	if(set_hvp_val >= current_hvp_val) set_hvp_val = current_hvp_val;
     	if(set_hvm_val >= current_hvm_val) set_hvm_val = current_hvm_val;
-        HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, set_hvp_val);
-        HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, set_hvm_val);
+    	last_hvp_val = HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, set_hvp_val);
+        last_hvm_val = HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, set_hvm_val);
 
         HAL_Delay(PAUSE_DURATION_MS);
 
@@ -171,6 +174,9 @@ void HV_Enable(void) {
         HAL_Delay(PAUSE_DURATION_MS);
 
     }while (set_hrp_val < current_hrp_val || set_hrm_val < current_hrm_val);
+
+    printf("LAST HVP REG VAL: 0x%08lX\r\n", last_hvp_val);
+    printf("LAST HVM REG VAL: 0x%08lX\r\n", last_hvm_val);
 
 	printf("set HVP: %d, HVM: %d\r\n", current_hvp_val, current_hvm_val);
 	printf("set REG HVP: %d, HVM: %d\r\n", current_hrp_val, current_hrm_val);
