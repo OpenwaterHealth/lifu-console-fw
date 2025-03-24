@@ -231,12 +231,12 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 
 		        // Debug print
 		        printf("Received HVP DAC Value: %u (0x%04X)\r\n", hvp_dac_value, hvp_dac_value);
-		        printf("Received HVP DAC Register: %u (0x%04X)\r\n", hvp_dac_reg, hvp_dac_reg);
-		        printf("Received HVM DAC Value: %u (0x%04X)\r\n", hvm_dac_value, hvm_dac_value);
-		        printf("Received HVM DAC Register: %u (0x%04X)\r\n", hvm_dac_reg, hvm_dac_reg);
 		        set_hvp(hvp_dac_value);
+		        printf("Received HVP DAC Register: %u (0x%04X)\r\n", hvp_dac_reg, hvp_dac_reg);
 		        set_hrp(hvp_dac_reg);
+		        printf("Received HVM DAC Value: %u (0x%04X)\r\n", hvm_dac_value, hvm_dac_value);
 		        set_hvm(hvm_dac_value);
+		        printf("Received HVM DAC Register: %u (0x%04X)\r\n", hvm_dac_reg, hvm_dac_reg);
 		        set_hrm(hvm_dac_reg);
 
 			}else{
