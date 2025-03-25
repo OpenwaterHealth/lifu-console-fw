@@ -32,7 +32,9 @@ uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t
 uint16_t HV_SetVoltage(uint16_t value);
 uint16_t HV_GetVoltage();
 uint16_t HV_GetOnVoltage();
+void set_use_exact(bool val);
 void HV_Enable(void);
+void HV_Enable_Exact(void);
 void HV_Disable(void);
 void HV_ClearDAC(void);
 void V12_Enable(void);

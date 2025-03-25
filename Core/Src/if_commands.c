@@ -95,14 +95,12 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			HAL_GPIO_WritePin(V12_ENABLE_GPIO_Port, V12_ENABLE_Pin, GPIO_PIN_RESET);
 			break;
 		case OW_POWER_HV_ON:
-			HV_Enable();
 			uartResp->command = OW_POWER_HV_ON;
-		    HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_RESET);
+			HV_Enable();
 			break;
 		case OW_POWER_HV_OFF:
 			HV_Disable();
 			uartResp->command = OW_POWER_HV_OFF;
-		    HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_SET);
 			break;
 		case OW_POWER_SET_HV:
 			uartResp->command = OW_POWER_SET_HV;
@@ -238,7 +236,7 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 		        set_hvm(hvm_dac_value);
 		        printf("Received HVM DAC Register: %u (0x%04X)\r\n", hvm_dac_reg, hvm_dac_reg);
 		        set_hrm(hvm_dac_reg);
-
+		        set_use_exact(true);
 			}else{
 				uartResp->packet_type = OW_ERROR;
 				uartResp->data_len = 0;
