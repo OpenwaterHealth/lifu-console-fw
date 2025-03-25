@@ -1,4 +1,8 @@
 #MicroXplorer Configuration settings - do not modify
+ADC.ClockPrescaler=ADC_CLOCK_SYNC_PCLK_DIV4
+ADC.ContinuousConvMode=ENABLE
+ADC.IPParameters=ClockPrescaler,ContinuousConvMode,SamplingTime
+ADC.SamplingTime=ADC_SAMPLETIME_28CYCLES_5
 CAD.formats=
 CAD.pinconfig=
 CAD.provider=

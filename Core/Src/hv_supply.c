@@ -10,6 +10,9 @@
 
 #include <stdio.h>
 
+#define VOLTAGE_DIVIDER_RATIO 0.0415
+#define ADC_MAX 4095.0   // 12-bit ADC resolution
+
 #define DAC_MAX_VALUE 4095
 #define STEP_SIZE 50
 #define PAUSE_DURATION_MS 100  // 500ms pause every STEP_SIZE
@@ -20,6 +23,24 @@ static uint16_t current_hvm_val = 0;
 static uint16_t current_hrm_val = 0;
 
 extern SPI_HandleTypeDef hspi1;
+
+float getHVReading() {
+	uint16_t adcValue = 0;
+	ADC_ChannelConfTypeDef sConfig = {0};
+	sConfig.Channel = ADC_CHANNEL_0;
+	sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
+	sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES_5;
+	HAL_ADC_ConfigChannel(&hadc, &sConfig);
+
+	HAL_Delay(250);
+    HAL_ADC_Start(&hadc);  // Start ADC in continuous mode
+    HAL_ADC_PollForConversion(&hadc, HAL_MAX_DELAY); // Wait for conversion
+    adcValue = HAL_ADC_GetValue(&hadc);
+
+    HAL_ADC_Stop(&hadc);
+	printf("Raw ADC Value 0x%04X \r\n", adcValue);
+	return adcValue * VOLTAGE_DIVIDER_RATIO;
+}
 
 static HAL_StatusTypeDef HV_DAC_ReadReg(uint32_t *data) {
     uint8_t rxBuffer[4];
@@ -182,6 +203,10 @@ void HV_Enable(void) {
 	printf("set REG HVP: %d, HVM: %d\r\n", current_hrp_val, current_hrm_val);
 
     HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_RESET);
+
+    float hvReading = getHVReading();
+    // Integer scaling for 2 decimal places
+    printf("HV+ reading: %d.%02dV\r\n", (int)hvReading, (int)(hvReading * 100) % 100);
 }
 
 void HV_Disable(void) {

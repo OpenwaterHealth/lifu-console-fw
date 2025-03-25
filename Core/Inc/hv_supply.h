@@ -39,6 +39,7 @@ void V12_Enable(void);
 void V12_Disable(void);
 bool getHVOnStatus();
 bool get12VOnStatus();
+float getHVReading();
 void System_Disable(void);
 void System_Enable(void);
 uint16_t set_hvm(uint16_t value);

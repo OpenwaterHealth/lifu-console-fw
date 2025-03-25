@@ -22,7 +22,7 @@ extern MAX31875_Init_t temp_sensor_1;
 extern MAX31875_Init_t temp_sensor_2;
 
 static uint32_t id_words[3] = {0};
-static uint16_t ret_voltage = 0;
+static float ret_voltage = 0;
 
 volatile float last_temperature1 = 0;
 volatile float last_temperature2 = 0;
@@ -117,9 +117,9 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			break;
 		case OW_POWER_GET_HV:
 			uartResp->command = OW_POWER_GET_HV;
-			ret_voltage = HV_GetVoltage();
-			uartResp->data_len = 2;
-			uartResp->data=(uint8_t*)&ret_voltage;
+			ret_voltage = getHVReading();
+			uartResp->data_len = 4;
+			uartResp->data = (uint8_t *)&ret_voltage;
 			break;
 		case OW_POWER_STATUS:
 			uartResp->command = OW_POWER_STATUS;

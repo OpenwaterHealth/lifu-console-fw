@@ -28,10 +28,10 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f0xx_hal.h"
-#include "MAX31875.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "MAX31875.h"
 
 /* USER CODE END Includes */
 
@@ -135,6 +135,7 @@ extern I2C_HandleTypeDef hi2c2;
 #define LOCAL_I2C_HANDLE hi2c1
 #define SYNC_I2C_HANDLE hi2c2
 
+extern ADC_HandleTypeDef hadc;
 
 /* USER CODE END Private defines */
 
