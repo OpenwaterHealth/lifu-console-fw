@@ -111,6 +111,7 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			{
 				uint16_t dac_value = ((uint16_t)cmd.data[0] << 8) | (uint16_t)cmd.data[1];
 				HV_SetVoltage(dac_value);
+		        set_use_exact(false);
 			}
 			break;
 		case OW_POWER_GET_HV:

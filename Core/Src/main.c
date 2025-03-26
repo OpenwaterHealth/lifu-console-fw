@@ -198,6 +198,12 @@ int main(void)
   HAL_GPIO_WritePin(SYS_RDY_GPIO_Port, SYS_RDY_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(HB_LED_GPIO_Port, HB_LED_Pin, GPIO_PIN_SET);
 
+  printf("I2C1 \r\n");
+  I2C_scan(&hi2c1);
+
+  printf("I2C2 \r\n");
+  I2C_scan(&hi2c2);
+
   comms_start_task();
 
 
