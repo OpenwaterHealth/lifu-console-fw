@@ -27,6 +27,7 @@
 #include "usbd_cdc_if.h"
 #include "uart_comms.h"
 #include "hv_supply.h"
+#include "max6663.h"
 #include "utils.h"
 
 #include <stdio.h>
@@ -170,6 +171,16 @@ int main(void)
 
   MAX31875_Init(&temp_sensor_2);
 
+  uint8_t reg_test = I2C_ReadRegister(MAX6653_TOP_I2C_ADDRESS, 0x3D);
+  uint8_t reg_test2 = I2C_ReadRegister(MAX6653_BOT_I2C_ADDRESS, 0x3D);
+
+  printf("DEVICE ID: %d\r\n", reg_test);
+  printf("DEVICE ID: %d\r\n", reg_test2);
+
+  I2C_WriteRegister(MAX6653_TOP_I2C_ADDRESS, 0x00, 0x01);
+  I2C_WriteRegister(MAX6653_TOP_I2C_ADDRESS, 0x20, 0xC0);
+  I2C_WriteRegister(MAX6653_BOT_I2C_ADDRESS, 0x00, 0x01);
+  I2C_WriteRegister(MAX6653_BOT_I2C_ADDRESS, 0x20, 0xC0);
 
   System_Enable();
 
@@ -178,10 +189,6 @@ int main(void)
   HAL_GPIO_WritePin(USB_RESET_GPIO_Port, USB_RESET_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(SCL_CFG_GPIO_Port, SCL_CFG_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(SDA_REM_GPIO_Port, SDA_REM_Pin, GPIO_PIN_RESET);
-
-  // I2C_scan(&hi2c1);  // 0x49
-  // I2C_scan(&hi2c2);  // 0x6D
-
 
   // bring usb hub out of reset
   HAL_GPIO_WritePin(USB_RESET_GPIO_Port, USB_RESET_Pin, GPIO_PIN_SET);
@@ -198,11 +205,11 @@ int main(void)
   HAL_GPIO_WritePin(SYS_RDY_GPIO_Port, SYS_RDY_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(HB_LED_GPIO_Port, HB_LED_Pin, GPIO_PIN_SET);
 
-  printf("I2C1 \r\n");
-  I2C_scan(&hi2c1);
+  // printf("I2C1 \r\n");
+  // I2C_scan(&hi2c1);  // 0x49
 
-  printf("I2C2 \r\n");
-  I2C_scan(&hi2c2);
+  // printf("I2C2 \r\n");
+  // I2C_scan(&hi2c2);  // 0x6D
 
   comms_start_task();
 
