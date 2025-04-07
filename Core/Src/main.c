@@ -176,16 +176,16 @@ int main(void)
 
   MAX31875_Init(&temp_sensor_2);
 
-  uint8_t reg_test = I2C_ReadRegister(MAX6653_TOP_I2C_ADDRESS, 0x3D);
-  uint8_t reg_test2 = I2C_ReadRegister(MAX6653_BOT_I2C_ADDRESS, 0x3D);
+  // uint8_t reg_test = I2C_ReadRegister(MAX6653_TOP_I2C_ADDRESS, 0x3D);
+  // uint8_t reg_test2 = I2C_ReadRegister(MAX6653_BOT_I2C_ADDRESS, 0x3D);
 
-  printf("DEVICE ID: %d\r\n", reg_test);
-  printf("DEVICE ID: %d\r\n", reg_test2);
+  // printf("DEVICE ID: %d\r\n", reg_test);
+  // printf("DEVICE ID: %d\r\n", reg_test2);
 
-  I2C_WriteRegister(MAX6653_TOP_I2C_ADDRESS, 0x00, 0x01);
-  I2C_WriteRegister(MAX6653_TOP_I2C_ADDRESS, 0x20, 0xC0);
-  I2C_WriteRegister(MAX6653_BOT_I2C_ADDRESS, 0x00, 0x01);
-  I2C_WriteRegister(MAX6653_BOT_I2C_ADDRESS, 0x20, 0xC0);
+  // I2C_WriteRegister(MAX6653_TOP_I2C_ADDRESS, 0x00, 0x01);
+  // I2C_WriteRegister(MAX6653_TOP_I2C_ADDRESS, 0x20, 0xC0);
+  // I2C_WriteRegister(MAX6653_BOT_I2C_ADDRESS, 0x00, 0x01);
+  // I2C_WriteRegister(MAX6653_BOT_I2C_ADDRESS, 0x20, 0xC0);
 
   System_Enable();
 
