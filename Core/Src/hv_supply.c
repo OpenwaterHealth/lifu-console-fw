@@ -16,7 +16,7 @@
 
 #define DAC_MAX_VALUE 4095
 #define STEP_SIZE 50
-#define PAUSE_DURATION_MS 250  // 500ms pause every STEP_SIZE
+#define PAUSE_DURATION_MS 100  // 500ms pause every STEP_SIZE
 
 static uint16_t current_hvp_val = 0;
 static uint16_t current_hrp_val = 0;
