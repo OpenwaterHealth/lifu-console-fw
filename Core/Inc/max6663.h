@@ -17,13 +17,14 @@
 #define I2C_DELAY()   do { __NOP(); __NOP(); __NOP(); __NOP(); } while (0)
 
 // I2C Functions
-void I2C_Init(void);
-void I2C_Start(void);
-void I2C_Stop(void);
-void I2C_Write(uint8_t data);
-uint8_t I2C_Read(uint8_t ack);
-uint8_t I2C_WriteRegister(uint8_t addr, uint8_t reg, uint8_t data);
-uint8_t I2C_ReadRegister(uint8_t addr, uint8_t reg);
+void sw_I2C_BUS_Init(void);
 
+void sw_I2C_start_cond(void);
+void sw_I2C_stop_cond(void);
+
+void sw_I2C_write_bit(uint8_t b);
+uint8_t sw_I2C_read_bit(void);
+void sw_I2C_write_byte(uint8_t byte);
+uint8_t I2C_read_byte(uint8_t ack);
 
 #endif /* INC_MAX6663_H_ */

@@ -30,6 +30,8 @@
 #include "max6663.h"
 #include "utils.h"
 
+#include "max6663.h"
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
@@ -69,7 +71,7 @@ DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-uint8_t FIRMWARE_VERSION_DATA[3] = {1, 0, 5};
+uint8_t FIRMWARE_VERSION_DATA[3] = {1, 0, 6};
 uint8_t rxBuffer[COMMAND_MAX_SIZE];
 uint8_t txBuffer[COMMAND_MAX_SIZE];
 
@@ -146,10 +148,13 @@ int main(void)
   printf("Open-LIFU Console Controller FW v%d.%d.%d\r\n\r\n",FIRMWARE_VERSION_DATA[0], FIRMWARE_VERSION_DATA[1], FIRMWARE_VERSION_DATA[2]);
   printf("CPU Clock Frequency: %lu MHz\r\n", HAL_RCC_GetSysClockFreq() / 1000000);
 
+  sw_I2C_BUS_Init();
+
   // disable power supply
   HV_Disable();
   // clear dac
   HV_ClearDAC();
+
 
   // Temperature Sensor 1 Configuration
   temp_sensor_1.conversionRate = MAX31875_CONVERSIONRATE_1;

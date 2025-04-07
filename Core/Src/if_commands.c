@@ -103,6 +103,7 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->command = OW_POWER_HV_OFF;
 			break;
 		case OW_POWER_SET_HV:
+			printf("set HV \r\n");
 			uartResp->command = OW_POWER_SET_HV;
 			uartResp->addr = 0;
 			uartResp->reserved = cmd.reserved;
