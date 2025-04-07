@@ -29,6 +29,8 @@
 #include "hv_supply.h"
 #include "utils.h"
 
+#include "max6663.h"
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
@@ -68,7 +70,7 @@ DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-uint8_t FIRMWARE_VERSION_DATA[3] = {1, 0, 5};
+uint8_t FIRMWARE_VERSION_DATA[3] = {1, 0, 6};
 uint8_t rxBuffer[COMMAND_MAX_SIZE];
 uint8_t txBuffer[COMMAND_MAX_SIZE];
 
@@ -145,10 +147,13 @@ int main(void)
   printf("Open-LIFU Console Controller FW v%d.%d.%d\r\n\r\n",FIRMWARE_VERSION_DATA[0], FIRMWARE_VERSION_DATA[1], FIRMWARE_VERSION_DATA[2]);
   printf("CPU Clock Frequency: %lu MHz\r\n", HAL_RCC_GetSysClockFreq() / 1000000);
 
+  sw_I2C_BUS_Init();
+
   // disable power supply
   HV_Disable();
   // clear dac
   HV_ClearDAC();
+
 
   // Temperature Sensor 1 Configuration
   temp_sensor_1.conversionRate = MAX31875_CONVERSIONRATE_1;
@@ -179,10 +184,6 @@ int main(void)
   HAL_GPIO_WritePin(SCL_CFG_GPIO_Port, SCL_CFG_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(SDA_REM_GPIO_Port, SDA_REM_Pin, GPIO_PIN_RESET);
 
-  // I2C_scan(&hi2c1);  // 0x49
-  // I2C_scan(&hi2c2);  // 0x6D
-
-
   // bring usb hub out of reset
   HAL_GPIO_WritePin(USB_RESET_GPIO_Port, USB_RESET_Pin, GPIO_PIN_SET);
 
@@ -198,11 +199,11 @@ int main(void)
   HAL_GPIO_WritePin(SYS_RDY_GPIO_Port, SYS_RDY_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(HB_LED_GPIO_Port, HB_LED_Pin, GPIO_PIN_SET);
 
-  printf("I2C1 \r\n");
-  I2C_scan(&hi2c1);
+  // printf("I2C1 \r\n");
+  // I2C_scan(&hi2c1);  // 0x49
 
-  printf("I2C2 \r\n");
-  I2C_scan(&hi2c2);
+  // printf("I2C2 \r\n");
+  // I2C_scan(&hi2c2);  // 0x6D
 
   comms_start_task();
 
