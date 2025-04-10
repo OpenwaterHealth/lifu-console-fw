@@ -31,7 +31,7 @@ float getHVReading() {
 	ADC_ChannelConfTypeDef sConfig = {0};
 	sConfig.Channel = ADC_CHANNEL_0;
 	sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
-	sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES_5;
+	sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
 	HAL_ADC_ConfigChannel(&hadc, &sConfig);
 	HAL_Delay(5);
     HAL_ADC_Start(&hadc);  // Start ADC in continuous mode
@@ -115,8 +115,8 @@ uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t
 uint16_t HV_SetVoltage(uint16_t value) {
 	current_hvp_val = value;
 	current_hvm_val = value;
-	current_hrp_val = 2400;
-	current_hrm_val = 2400;
+	current_hrp_val = 1000;
+	current_hrm_val = 1000;
     return value;
 }
 
@@ -152,13 +152,12 @@ uint16_t HV_GetOnVoltage() {
 }
 
 void HV_Enable_Exact(void) {
+	printf("Using Exact Function\r\n");
     uint16_t set_hvp_val = 0;
     uint16_t set_hvm_val = 0;
     uint16_t set_hrp_val = 0;
     uint16_t set_hrm_val = 0;
 
-    uint32_t last_hvm_val = 0;
-    uint32_t last_hvp_val = 0;
 
     printf("Set Precise DAC Settings\r\n");
 
@@ -183,8 +182,8 @@ void HV_Enable_Exact(void) {
 
     	if(set_hvp_val >= current_hvp_val) set_hvp_val = current_hvp_val;
     	if(set_hvm_val >= current_hvm_val) set_hvm_val = current_hvm_val;
-    	last_hvp_val = HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, set_hvp_val);
-        last_hvm_val = HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, set_hvm_val);
+    	HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, set_hvp_val);
+        HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, set_hvm_val);
 
         HAL_Delay(PAUSE_DURATION_MS);
 
@@ -205,11 +204,9 @@ void HV_Enable_Exact(void) {
 
     }while (set_hrp_val < current_hrp_val || set_hrm_val < current_hrm_val);
 
-    printf("LAST HVP REG VAL: 0x%08lX\r\n", last_hvp_val);
-    printf("LAST HVM REG VAL: 0x%08lX\r\n", last_hvm_val);
 
-	printf("set HVP: %d, HVM: %d\r\n", current_hvp_val, current_hvm_val);
-	printf("set REG HVP: %d, HVM: %d\r\n", current_hrp_val, current_hrm_val);
+	printf("HVP: %d, HVM: %d\r\n", current_hvp_val, current_hvm_val);
+	printf("REG HVP: %d, HVM: %d\r\n", current_hrp_val, current_hrm_val);
 
     HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_RESET);
 
@@ -228,12 +225,6 @@ void HV_Enable(void) {
     uint16_t set_hrp_val = 0;
     uint16_t set_hrm_val = 0;
 
-    uint32_t last_hvm_val = 0;
-    uint32_t last_hvp_val = 0;
-
-    float offset = 0.0;
-
-	uint16_t curr_voltage_adc_val = 0;
 	ADC_ChannelConfTypeDef sConfig = {0};
 	sConfig.Channel = ADC_CHANNEL_0;
 	sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
@@ -246,70 +237,81 @@ void HV_Enable(void) {
 	printf("set HVM DAC %d\r\n", current_hvm_val);
 	printf("set HVM REG DAC %d\r\n", current_hrm_val);
 
-	float target_voltage = (((float)current_hvp_val/4095) * 162.0)-15.0;
+	// Get target voltage
+	float target_voltage = (((float)current_hvp_val/4095) * 162.0);
 	printf("Target Voltage %d.%02dV\r\n", (int)target_voltage, (int)(target_voltage * 100) % 100);
 	if(target_voltage>69)
 	{
-		offset = 0.0;
-		set_hrp_val = 2500;
-		set_hrm_val = 2500;
+		set_hrp_val = 0;
+		set_hrm_val = 0;
 	}else{
-		offset = 0.014;
-		set_hrp_val = 1000;
-		set_hrm_val = 1000;
+		set_hrp_val = 0;
+		set_hrm_val = 0;
 	}
 
+	// Set DACs to 0
     HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, 0);
     HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, 0);
     HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, 0);
     HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0);
 
+	// turn HV OFF
     HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_RESET);
 
     do{
 
-        // Increment
+    	// read HV on ADC this should be 0 when regulator is off
+        float test_hvReading = getHVReading();
+        printf("SET PS HV+ reading: %d.%02dV hvp: 0x%04X hrp: 0x%04X\r\n", (int)test_hvReading, (int)(test_hvReading * 100) % 100, set_hvp_val, set_hrp_val);
+
+        // when voltage is greater than or equal to 5v over requested value stop increasing the switching voltage
+        if(test_hvReading >= (target_voltage+5)) break;
+
+        // Increment switching supply DAC output by step size
     	set_hvp_val = set_hvp_val + STEP_SIZE;
     	set_hvm_val = set_hvm_val + STEP_SIZE;
 
+    	// if Step value is greater than or equal to desired limit the setting
     	if(set_hvp_val >= current_hvp_val) set_hvp_val = current_hvp_val;
     	if(set_hvm_val >= current_hvm_val) set_hvm_val = current_hvm_val;
-    	last_hvp_val = HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, set_hvp_val);
-        last_hvm_val = HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, set_hvm_val);
 
+    	// set switching supply DACs
+    	HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, set_hvp_val);
+        HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, set_hvm_val);
+
+        // pause between each step
         HAL_Delay(PAUSE_DURATION_MS);
 
     }while (set_hvp_val < current_hvp_val || set_hvm_val < current_hvm_val);
 
     do{
-
-        // Increment
+        // Increment Regulator DAC output by step size
     	set_hrp_val = set_hrp_val + STEP_SIZE;
     	set_hrm_val = set_hrm_val + STEP_SIZE;
 
-    	current_hrp_val = HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, set_hrp_val);
-    	current_hrm_val = HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, set_hrm_val);
+    	// set regulator DACs
+    	HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, set_hrp_val);
+    	HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, set_hrm_val);
 
+    	// pause between each step and allow time to settle prior to reading
         HAL_Delay(PAUSE_DURATION_MS);
 
-        HAL_ADC_Start(&hadc);  // Start ADC in continuous mode
-        HAL_ADC_PollForConversion(&hadc, HAL_MAX_DELAY); // Wait for conversion
-        curr_voltage_adc_val = HAL_ADC_GetValue(&hadc);
-        HAL_ADC_Stop(&hadc);
-        float test_hvReading = curr_voltage_adc_val * (VOLTAGE_DIVIDER_RATIO-offset);
-        printf("HV+ reading: %d.%02dV hrp: 0x%04X\r\n", (int)test_hvReading, (int)(test_hvReading * 100) % 100, set_hrp_val);
+        // read HV on ADC
+        float test_hvReading = getHVReading();
+        printf("SET REG HV+ reading: %d.%02dV hvp: 0x%04X hrp: 0x%04X\r\n", (int)test_hvReading, (int)(test_hvReading * 100) % 100, set_hvp_val, set_hrp_val);
 
-        if(test_hvReading >= target_voltage) break;
-    }while (set_hrp_val < 3800);
+        // if we are at target voltage or above stop
+    	if(test_hvReading >= target_voltage) break;
 
-    printf("LAST HVP REG VAL: 0x%08lX\r\n", last_hvp_val);
-    printf("LAST HVM REG VAL: 0x%08lX\r\n", last_hvm_val);
+    }while (set_hrp_val < 3800);  // limit max output
 
-	printf("set HVP: %d, HVM: %d\r\n", current_hvp_val, current_hvm_val);
-	printf("set REG HVP: 0x%08lX, HVM:0x%08lX\r\n", current_hrp_val, current_hrm_val);
+	printf("set HVP: %d, HVM: %d\r\n", set_hvp_val, set_hvm_val);
+	printf("set REG HVP: %d, HVM: %d\r\n", set_hrp_val, set_hrm_val);
 
+	// turn HV ON
     HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_RESET);
 
+    // pause between each step and allow time to settle
     HAL_Delay(PAUSE_DURATION_MS);
     float hvReading = getHVReading();
     // Integer scaling for 2 decimal places
