@@ -18,14 +18,14 @@ const float convertion_temp_table[12] = {0.0625f, 0.125f, 0.25f, 0.5f, 1.0f, 2.0
 void MAX31875_Write_Reg(uint16_t DevAddress, uint8_t reg, uint8_t *dataW, uint8_t size)								// use into MAX31875_Init function
 {
 	dataW[0]= reg;														// add register address in the first case of dataW array
-	HAL_I2C_Master_Transmit(&LOCAL_I2C_HANDLE, DevAddress, dataW, size, 10);						// transmit dataW array
+	HAL_I2C_Master_Transmit(&LOCAL_I2C_HANDLE, DevAddress << 1, dataW, size, 10);						// transmit dataW array
 }
 
 /* MAX31875 Read Reg */
 void MAX31875_Read_Reg(uint16_t DevAddress, uint8_t reg, uint8_t *dataR, uint8_t size)								// use into MAX31875_Get_Temp function
 {
-	HAL_I2C_Master_Transmit(&LOCAL_I2C_HANDLE, DevAddress, &reg, 1, 10);						// send register Address
-	HAL_I2C_Master_Receive(&LOCAL_I2C_HANDLE, DevAddress, dataR, size, 10);						// receive dataR from Register
+	HAL_I2C_Master_Transmit(&LOCAL_I2C_HANDLE, DevAddress << 1, &reg, 1, 10);						// send register Address
+	HAL_I2C_Master_Receive(&LOCAL_I2C_HANDLE, DevAddress << 1, dataR, size, 10);						// receive dataR from Register
 }
 
 /* Init Function */
@@ -94,3 +94,21 @@ float MAX31875_Get_Temp(MAX31875_Init_t *tempInitDef)
 	return tempData;
 }
 
+float MAX31875_ReadTemperature(uint8_t address) {
+    uint8_t pointer_byte = 0x00;  // Temperature Register
+    uint8_t temp_data[2];
+    int16_t raw_temp;
+    float temperature;
+
+    // Set pointer register to Temperature Register
+    HAL_I2C_Master_Transmit(&LOCAL_I2C_HANDLE, address << 1, &pointer_byte, 1, HAL_MAX_DELAY);
+
+    // Read temperature data
+    HAL_I2C_Master_Receive(&LOCAL_I2C_HANDLE, address << 1, temp_data, 2, HAL_MAX_DELAY);
+
+    // Convert raw data to temperature
+    raw_temp = (temp_data[0] << 8) | temp_data[1];
+    temperature = (raw_temp >> 4) * 0.0625;  // For 12-bit resolution
+
+    return temperature;
+}

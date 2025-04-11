@@ -13,9 +13,9 @@
 #include <string.h>
 
 /* Define Device Address */
-#define MAX31875_TEMP1_DEV_ADDR 				0x90			// slave address
+#define MAX31875_TEMP1_DEV_ADDR 				0x48			// slave address
 
-#define MAX31875_TEMP2_DEV_ADDR 				0x92			// slave address
+#define MAX31875_TEMP2_DEV_ADDR 				0x49			// slave address
 
 /* Define registers address */
 #define MAX31875_TEMP_REG_ADDR 				0x00			// temperature register address
@@ -73,5 +73,6 @@ void MAX31875_Init(MAX31875_Init_t *tempInitDef);
 /* Get Temperature (MAX31875_Get_Temp)*/
 float MAX31875_Get_Temp(MAX31875_Init_t *tempInitDef);
 
+float MAX31875_ReadTemperature(uint8_t address);
 
 #endif /* INC_MAX31875_H_ */
