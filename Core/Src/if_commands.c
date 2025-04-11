@@ -127,7 +127,7 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 		case OW_POWER_GET_TEMP1:
 			// last_temperature1 = 30.0f + (rand() % 41);  // Random float between 30.0 and 70.0
 			last_temperature1 = MAX31875_ReadTemperature(MAX31875_TEMP1_DEV_ADDR);
-			printf("TEMP1: %d.%02d\r\n", (int)last_temperature1, (((int)last_temperature1 - (int)last_temperature1) * 100));
+			//printf("TEMP1: %d.%02d\r\n", (int)last_temperature1, (((int)last_temperature1 - (int)last_temperature1) * 100));
 			uartResp->command = OW_POWER_GET_TEMP1;
 			uartResp->data_len = 4;
 			uartResp->data = (uint8_t *)&last_temperature1;
@@ -135,7 +135,7 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 		case OW_POWER_GET_TEMP2:
 			// last_temperature2 = 30.0f + (rand() % 41);  // Random float between 30.0 and 70.0
 			last_temperature2 = MAX31875_ReadTemperature(MAX31875_TEMP2_DEV_ADDR);
-			printf("TEMP2: %d.%02d\r\n", (int)last_temperature2, (((int)last_temperature2 - (int)last_temperature2) * 100));
+			//printf("TEMP2: %d.%02d\r\n", (int)last_temperature2, (((int)last_temperature2 - (int)last_temperature2) * 100));
 			uartResp->command = OW_POWER_GET_TEMP2;
 			uartResp->data_len = 4;
 			uartResp->data = (uint8_t *)&last_temperature2;		
