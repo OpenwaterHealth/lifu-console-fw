@@ -30,8 +30,6 @@
 #include "max6663.h"
 #include "utils.h"
 
-#include "max6663.h"
-
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
@@ -71,12 +69,9 @@ DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-uint8_t FIRMWARE_VERSION_DATA[3] = {1, 0, 8};
+uint8_t FIRMWARE_VERSION_DATA[3] = {1, 0, 9};
 uint8_t rxBuffer[COMMAND_MAX_SIZE];
 uint8_t txBuffer[COMMAND_MAX_SIZE];
-
-MAX31875_Init_t temp_sensor_1;
-MAX31875_Init_t temp_sensor_2;
 
 /* USER CODE END PV */
 
@@ -155,26 +150,10 @@ int main(void)
   // clear dac
   HV_ClearDAC();
 
+  I2C_scan(&hi2c1);
 
-  // Temperature Sensor 1 Configuration
-  temp_sensor_1.conversionRate = MAX31875_CONVERSIONRATE_1;
-  temp_sensor_1.shutDown = MAX31875_SHUTDOWN_OFF;
-  temp_sensor_1.timeOut = MAX31875_TIMEOUT_ENABLE;
-  temp_sensor_1.resolution = MAX31875_RESOLUTION_12;
-  temp_sensor_1.dataFormat = MAX31875_DATAFORMAT_NORMAL;
-  temp_sensor_1.dev_address = MAX31875_TEMP1_DEV_ADDR;
+  HAL_Delay(100);
 
-  MAX31875_Init(&temp_sensor_2);
-
-  // Temperature Sensor 1 Configuration
-  temp_sensor_2.conversionRate = MAX31875_CONVERSIONRATE_1;
-  temp_sensor_2.shutDown = MAX31875_SHUTDOWN_OFF;
-  temp_sensor_2.timeOut = MAX31875_TIMEOUT_ENABLE;
-  temp_sensor_2.resolution = MAX31875_RESOLUTION_12;
-  temp_sensor_2.dataFormat = MAX31875_DATAFORMAT_NORMAL;
-  temp_sensor_2.dev_address = MAX31875_TEMP2_DEV_ADDR;
-
-  MAX31875_Init(&temp_sensor_2);
 
   // uint8_t reg_test = I2C_ReadRegister(MAX6653_TOP_I2C_ADDRESS, 0x3D);
   // uint8_t reg_test2 = I2C_ReadRegister(MAX6653_BOT_I2C_ADDRESS, 0x3D);
