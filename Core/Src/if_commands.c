@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include <stdlib.h>  // For rand() and srand()
 #include <time.h>    // For seeding random number generator
 
@@ -20,6 +21,8 @@ extern uint8_t FIRMWARE_VERSION_DATA[3];
 
 extern MAX31875_Init_t temp_sensor_1;
 extern MAX31875_Init_t temp_sensor_2;
+extern bool _enter_dfu;
+
 
 static uint32_t id_words[3] = {0};
 static float ret_voltage = 0;
@@ -43,7 +46,7 @@ static void print_uart_packet(const UartPacket* packet) {
     printf("\r\n");
 }
 
-static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
+static void OW_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 {
 	switch (cmd.command)
 	{
@@ -86,6 +89,42 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->data_len = 16;
 			uartResp->data = (uint8_t *)&id_words;
 			break;
+		case OW_CMD_NOP:
+			uartResp->command = OW_CMD_NOP;
+			break;
+		case OW_CMD_RESET:
+			uartResp->command = OW_CMD_RESET;
+
+			_enter_dfu = false;
+
+			__HAL_TIM_CLEAR_FLAG(&htim17, TIM_FLAG_UPDATE);
+			__HAL_TIM_SET_COUNTER(&htim17, 0);
+			if(HAL_TIM_Base_Start_IT(&htim17) != HAL_OK){
+				uartResp->packet_type = OW_ERROR;
+			}
+			break;
+		case OW_CMD_DFU:
+			uartResp->command = OW_CMD_DFU;
+
+			_enter_dfu = true;
+
+			__HAL_TIM_CLEAR_FLAG(&htim17, TIM_FLAG_UPDATE);
+			__HAL_TIM_SET_COUNTER(&htim17, 0);
+			if(HAL_TIM_Base_Start_IT(&htim17) != HAL_OK){
+				uartResp->packet_type = OW_ERROR;
+			}
+			break;
+		default:
+			uartResp->packet_type = OW_UNKNOWN;
+			break;
+	}
+
+}
+
+static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
+{
+	switch (cmd.command)
+	{
 		case OW_POWER_12V_ON:
 			uartResp->command = OW_POWER_12V_ON;
 			HAL_GPIO_WritePin(V12_ENABLE_GPIO_Port, V12_ENABLE_Pin, GPIO_PIN_SET);
@@ -207,18 +246,6 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			}
 
 			break;
-		case OW_CMD_NOP:
-			uartResp->command = OW_CMD_NOP;
-			break;
-		case OW_CMD_RESET:
-			uartResp->command = OW_CMD_RESET;
-
-			__HAL_TIM_CLEAR_FLAG(&htim17, TIM_FLAG_UPDATE);
-			__HAL_TIM_SET_COUNTER(&htim17, 0);
-			if(HAL_TIM_Base_Start_IT(&htim17) != HAL_OK){
-				uartResp->packet_type = OW_ERROR;
-			}
-			break;
 		case OW_POWER_SET_DACS:
 			uartResp->command = OW_POWER_SET_DACS;
 			uartResp->addr = 0;
@@ -272,8 +299,10 @@ UartPacket process_if_command(UartPacket cmd)
 		//JSON_ProcessCommand(&uartResp, cmd);
 		break;
 	case OW_CMD:
+		OW_ProcessCommand(&uartResp, cmd);
+		break;
 	case OW_POWER:
-		//process by the USTX Controller
+		//process by the Power Console Controller
 		POWER_ProcessCommand(&uartResp, cmd);
 		break;
 	default:
