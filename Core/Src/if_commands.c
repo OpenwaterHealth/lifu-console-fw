@@ -17,6 +17,7 @@
 #include <time.h>    // For seeding random number generator
 
 extern uint8_t FIRMWARE_VERSION_DATA[3];
+extern bool _enter_dfu;
 
 extern MAX31875_Init_t temp_sensor_1;
 extern MAX31875_Init_t temp_sensor_2;
@@ -28,7 +29,7 @@ volatile float last_temperature1 = 0;
 volatile float last_temperature2 = 0;
 volatile uint8_t last_btFan_speed = 0;
 volatile uint8_t last_tpFan_speed = 0;
-volatile uint8_t rgb_state = 0; // 0 = off, 1 == RED, 2 == GREEN, 3 == BLUE
+volatile uint8_t rgb_state = 2; // 0 = off, 1 == RED, 2 == GREEN, 3 == BLUE
 
 static void print_uart_packet(const UartPacket* packet) {
     printf("ID: 0x%04X\r\n", packet->id);
@@ -180,6 +181,24 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			else
 			{
 				rgb_state = cmd.reserved;
+				HAL_GPIO_WritePin(LD_R_GPIO_Port, LD_R_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LD_G_GPIO_Port, LD_G_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LD_B_GPIO_Port, LD_B_Pin, GPIO_PIN_SET);
+				switch(rgb_state)
+				{
+					case 1:
+						HAL_GPIO_WritePin(LD_R_GPIO_Port, LD_R_Pin, GPIO_PIN_RESET);
+					break;
+					case 2:
+						HAL_GPIO_WritePin(LD_G_GPIO_Port, LD_G_Pin, GPIO_PIN_RESET);
+					break;
+					case 3:
+						HAL_GPIO_WritePin(LD_B_GPIO_Port, LD_B_Pin, GPIO_PIN_RESET);
+					break;
+					case 0:
+					default:
+					break;
+				}
 			}
 			break;
 		case OW_POWER_GET_RGB:
@@ -212,6 +231,19 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			break;
 		case OW_CMD_RESET:
 			uartResp->command = OW_CMD_RESET;
+
+			_enter_dfu = false;
+
+			__HAL_TIM_CLEAR_FLAG(&htim17, TIM_FLAG_UPDATE);
+			__HAL_TIM_SET_COUNTER(&htim17, 0);
+			if(HAL_TIM_Base_Start_IT(&htim17) != HAL_OK){
+				uartResp->packet_type = OW_ERROR;
+			}
+			break;
+		case OW_CMD_DFU:
+			uartResp->command = OW_CMD_DFU;
+
+			_enter_dfu = true;
 
 			__HAL_TIM_CLEAR_FLAG(&htim17, TIM_FLAG_UPDATE);
 			__HAL_TIM_SET_COUNTER(&htim17, 0);
