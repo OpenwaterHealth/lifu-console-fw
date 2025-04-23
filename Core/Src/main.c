@@ -73,6 +73,8 @@ uint8_t FIRMWARE_VERSION_DATA[3] = {1, 0, 9};
 uint8_t rxBuffer[COMMAND_MAX_SIZE];
 uint8_t txBuffer[COMMAND_MAX_SIZE];
 
+volatile bool _enter_dfu = false;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -132,7 +134,7 @@ int main(void)
   MX_I2C1_Init();
   MX_I2C2_Init();
   MX_SPI1_Init();
-
+  MX_USB_DEVICE_Init();
   MX_USART3_UART_Init();
   MX_TIM14_Init();
   MX_TIM17_Init();
@@ -153,6 +155,7 @@ int main(void)
   I2C_scan(&hi2c1);
 
   HAL_Delay(100);
+
 
 
   // uint8_t reg_test = I2C_ReadRegister(MAX6653_TOP_I2C_ADDRESS, 0x3D);
@@ -761,6 +764,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   if (htim->Instance == TIM17) {
       // Stop the timer to prevent re-triggering
       HAL_TIM_Base_Stop_IT(htim);
+
+      if(_enter_dfu)
+      {
+		// jump to bootloader DFU
+		// 16k SRAM in address 0x2000 0000 - 0x2000 3FFF
+		*((unsigned long *)0x20003FF0) = 0xDEADBEEF;
+      }
 
       MX_USB_DEVICE_DeInit();
 

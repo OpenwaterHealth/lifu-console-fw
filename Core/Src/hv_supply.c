@@ -115,8 +115,8 @@ uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t
 uint16_t HV_SetVoltage(uint16_t value) {
 	current_hvp_val = value;
 	current_hvm_val = value;
-	current_hrp_val = 1000;
-	current_hrm_val = 1000;
+	current_hrp_val = 0;
+	current_hrm_val = 0;
     return value;
 }
 
@@ -228,7 +228,7 @@ void HV_Enable(void) {
 	ADC_ChannelConfTypeDef sConfig = {0};
 	sConfig.Channel = ADC_CHANNEL_0;
 	sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
-	sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES_5;
+	sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
 	HAL_ADC_ConfigChannel(&hadc, &sConfig);
 
 	printf("set HVP DAC %d\r\n", current_hvp_val);
@@ -255,7 +255,7 @@ void HV_Enable(void) {
     HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, 0);
     HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0);
 
-	// turn HV OFF
+	// turn HV ON
     HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_RESET);
 
     do{
@@ -282,7 +282,7 @@ void HV_Enable(void) {
         // pause between each step
         HAL_Delay(PAUSE_DURATION_MS);
 
-    }while (set_hvp_val < current_hvp_val || set_hvm_val < current_hvm_val);
+    }while (set_hvp_val < (current_hvp_val+100) || set_hvm_val < (current_hvm_val+100));  // + an addition 6.5v for head room
 
     do{
         // Increment Regulator DAC output by step size
@@ -320,6 +320,7 @@ void HV_Enable(void) {
 
 void HV_Disable(void) {
 
+	// turn HV OFF
 	HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_SET);
     HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, 0);
     HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, 0);

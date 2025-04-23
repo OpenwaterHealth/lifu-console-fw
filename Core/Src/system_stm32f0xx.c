@@ -123,6 +123,7 @@ const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
   * @param  None
   * @retval None
   */
+void (*SysMemBootJump)(void);
 void SystemInit(void)
 {
   /* NOTE :SystemInit(): This function is called at startup just after reset and 
@@ -131,6 +132,14 @@ void SystemInit(void)
                          User can setups the default system clock (System clock source, PLL Multiplier
                          and Divider factors, AHB/APBx prescalers and Flash settings).
    */
+	if ( *((unsigned long *)0x20003FF0) == 0xDEADBEEF ) {
+	   *((unsigned long *)0x20003FF0) =  0xCAFEFEED; // Reset our trigger
+	  __set_MSP(0x20002250);
+													 // 0x1fffC800 is "System Memory" start address for STM32 F0xx
+	  SysMemBootJump = (void (*)(void)) (*((uint32_t *) 0x1fffC804)); // Point the PC to the System Memory reset vector (+4)
+	  SysMemBootJump();
+	  while (1);
+	}
 }
 
 /**
