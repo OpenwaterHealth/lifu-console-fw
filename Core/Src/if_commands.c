@@ -109,10 +109,13 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->addr = 0;
 			uartResp->reserved = cmd.reserved;
 			uartResp->data_len = 0;
-			if(cmd.data_len == 2)
+			if(cmd.data_len == 4)
 			{
-				uint16_t dac_value = ((uint16_t)cmd.data[0] << 8) | (uint16_t)cmd.data[1];
-				HV_SetVoltage(dac_value);
+				uint16_t dac_value_HVP = ((uint16_t)cmd.data[0] << 8) | (uint16_t)cmd.data[1];
+				uint16_t dac_value_HVM = ((uint16_t)cmd.data[2] << 8) | (uint16_t)cmd.data[3];
+				printf("Received HVP DAC Value: %u (0x%04X)\r\n", dac_value_HVP, dac_value_HVP);
+				printf("Received HVM DAC Value: %u (0x%04X)\r\n", dac_value_HVM, dac_value_HVM);
+				HV_SetVoltage(dac_value_HVP, dac_value_HVM);
 		        set_use_exact(false);
 			}
 			break;

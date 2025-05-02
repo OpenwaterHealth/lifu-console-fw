@@ -112,12 +112,12 @@ uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t
     return command;
 }
 
-uint16_t HV_SetVoltage(uint16_t value) {
-	current_hvp_val = value;
-	current_hvm_val = value;
-	current_hrp_val = 1000;
-	current_hrm_val = 1000;
-    return value;
+uint16_t HV_SetVoltage(uint16_t value_hvp, uint16_t value_hvm) {
+	current_hvp_val = value_hvp;
+	current_hvm_val = value_hvm;
+	current_hrp_val = 1000; // why is this hardcoded?
+	current_hrm_val = 1000; // why is this hardcoded?
+    return 0; // we don't use this return value?
 }
 
 uint16_t set_hvm(uint16_t value) {
@@ -240,14 +240,14 @@ void HV_Enable(void) {
 	// Get target voltage
 	float target_voltage = (((float)current_hvp_val/4095) * 162.0);
 	printf("Target Voltage %d.%02dV\r\n", (int)target_voltage, (int)(target_voltage * 100) % 100);
-	if(target_voltage>69)
-	{
-		set_hrp_val = 0;
-		set_hrm_val = 0;
-	}else{
-		set_hrp_val = 0;
-		set_hrm_val = 0;
-	}
+	// if(target_voltage>69)
+	// {
+	// 	set_hrp_val = 0;
+	// 	set_hrm_val = 0;
+	// }else{
+	// 	set_hrp_val = 0;
+	// 	set_hrm_val = 0;
+	// }
 
 	// Set DACs to 0
     HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, 0);

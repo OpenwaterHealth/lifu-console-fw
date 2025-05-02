@@ -29,7 +29,7 @@ typedef enum {
 // Function Prototypes
 void HV_ReadStatusRegister(uint32_t *status_data);
 uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t value);
-uint16_t HV_SetVoltage(uint16_t value);
+uint16_t HV_SetVoltage(uint16_t value_hvp, uint16_t value_hvm);
 uint16_t HV_GetVoltage();
 uint16_t HV_GetOnVoltage();
 void set_use_exact(bool val);
