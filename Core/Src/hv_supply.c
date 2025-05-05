@@ -115,8 +115,20 @@ uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t
 uint16_t HV_SetVoltage(uint16_t value_hvp, uint16_t value_hvm) {
 	current_hvp_val = value_hvp;
 	current_hvm_val = value_hvm;
-	current_hrp_val = 1000; // why is this hardcoded?
-	current_hrm_val = 1000; // why is this hardcoded?
+    printf("current_hvp_val: %u\r\n", current_hvp_val);
+    printf("current_hvm_val: %u\r\n", current_hvm_val);
+
+    // We set the HV to be 20% above target voltage, setting regulator
+    // values to original target voltage.
+    current_hrp_val = 1000; // why is this hardcoded?
+    current_hrm_val = 1000; // why is this hardcoded?
+
+	// current_hrp_val = (uint16_t) (current_hvp_val * 1.5); 
+	// current_hrm_val = (uint16_t) (current_hvm_val * 1.5);
+
+    printf("current_hrp_val: %u\r\n", current_hrp_val);
+    printf("current_hrm_val: %u\r\n", current_hrm_val);
+
     return 0; // we don't use this return value?
 }
 
@@ -224,6 +236,10 @@ void HV_Enable(void) {
     uint16_t set_hvm_val = 0;
     uint16_t set_hrp_val = 0;
     uint16_t set_hrm_val = 0;
+    float hrp_intercept = 0.0;
+    float hrm_intercept = 0.0;
+    float hrp_slope = 0.0;
+    float hrm_slope = 0.0;
 
 	ADC_ChannelConfTypeDef sConfig = {0};
 	sConfig.Channel = ADC_CHANNEL_0;
@@ -239,7 +255,31 @@ void HV_Enable(void) {
 
 	// Get target voltage
 	float target_voltage = (((float)current_hvp_val/4095) * 162.0);
-	printf("Target Voltage %d.%02dV\r\n", (int)target_voltage, (int)(target_voltage * 100) % 100);
+    float target_voltage_reg = target_voltage / 1.2;
+
+    if (target_voltage_reg < 50) {
+        ////// NOT CALCULATED YET //////
+        // Voltage adjustment formulas for 5V-50V
+        // Positive Switching Supply (HVP)
+        hrp_intercept = 0;
+        hrp_slope = 0;
+
+        // Negative Switching Supply (HVM)
+        hrm_intercept = 0;
+        hrm_slope = 0;
+    } else {
+        // Voltage adjustment formulas for 50V-100V
+        // Positive Regulator Supply (HVP_REG)
+        hrp_intercept = -1.757067669;
+        hrp_slope = 0.02652781955;
+
+        // Negative Regulator Supply (HVM_REG)
+        hrm_intercept = -1.327744361;
+        hrm_slope = 0.02620601504;
+    }
+
+	printf("Target HV Voltage %d.%02dV\r\n", (int)target_voltage, (int)(target_voltage * 100) % 100);
+    printf("Target REG Voltage %d.%02dV\r\n", (int)target_voltage_reg, (int)(target_voltage_reg * 100) % 100);
 	// if(target_voltage>69)
 	// {
 	// 	set_hrp_val = 0;
@@ -248,6 +288,12 @@ void HV_Enable(void) {
 	// 	set_hrp_val = 0;
 	// 	set_hrm_val = 0;
 	// }
+
+    current_hrp_val = (uint16_t) (target_voltage_reg - hrp_intercept) / hrp_slope;
+    current_hrm_val = (uint16_t) (target_voltage_reg - hrm_intercept) / hrm_slope;
+
+    printf("set adjusted HRP DAC %d\r\n", current_hvm_val);
+	printf("set adjusted HRM REG DAC %d\r\n", current_hrm_val);
 
 	// Set DACs to 0
     HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, 0);
@@ -289,6 +335,10 @@ void HV_Enable(void) {
     	set_hrp_val = set_hrp_val + STEP_SIZE;
     	set_hrm_val = set_hrm_val + STEP_SIZE;
 
+        // if Step value is greater than or equal to desired limit the setting
+    	if(set_hrp_val >= current_hrp_val) set_hrp_val = current_hrp_val;
+    	if(set_hrm_val >= current_hrm_val) set_hrm_val = current_hrm_val;
+
     	// set regulator DACs
     	HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, set_hrp_val);
     	HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, set_hrm_val);
@@ -303,7 +353,7 @@ void HV_Enable(void) {
         // if we are at target voltage or above stop
     	if(test_hvReading >= target_voltage) break;
 
-    }while (set_hrp_val < 3800);  // limit max output
+    }while (set_hrp_val < current_hrp_val || set_hrm_val < current_hrm_val);  // limit max output
 
 	printf("set HVP: %d, HVM: %d\r\n", set_hvp_val, set_hvm_val);
 	printf("set REG HVP: %d, HVM: %d\r\n", set_hrp_val, set_hrm_val);
