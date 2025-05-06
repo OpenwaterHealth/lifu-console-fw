@@ -120,11 +120,11 @@ uint16_t HV_SetVoltage(uint16_t value_hvp, uint16_t value_hvm) {
 
     // We set the HV to be 20% above target voltage, setting regulator
     // values to original target voltage.
-    current_hrp_val = 1000; // why is this hardcoded?
-    current_hrm_val = 1000; // why is this hardcoded?
+    // current_hrp_val = 1000; // why is this hardcoded?
+    // current_hrm_val = 1000; // why is this hardcoded?
 
-	// current_hrp_val = (uint16_t) (current_hvp_val * 1.5); 
-	// current_hrm_val = (uint16_t) (current_hvm_val * 1.5);
+	current_hrp_val = (uint16_t) (current_hvp_val * 1.5); 
+	current_hrm_val = (uint16_t) (current_hvm_val * 1.5);
 
     printf("current_hrp_val: %u\r\n", current_hrp_val);
     printf("current_hrm_val: %u\r\n", current_hrm_val);
@@ -258,15 +258,14 @@ void HV_Enable(void) {
     float target_voltage_reg = target_voltage / 1.2;
 
     if (target_voltage_reg < 50) {
-        ////// NOT CALCULATED YET //////
         // Voltage adjustment formulas for 5V-50V
         // Positive Switching Supply (HVP)
-        hrp_intercept = 0;
-        hrp_slope = 0;
+        hrp_intercept = 0.004852941176;
+        hrp_slope = 0.02587205882;
 
         // Negative Switching Supply (HVM)
-        hrm_intercept = 0;
-        hrm_slope = 0;
+        hrm_intercept = 0.2515362731;
+        hrm_slope = 0.02561960784;
     } else {
         // Voltage adjustment formulas for 50V-100V
         // Positive Regulator Supply (HVP_REG)
