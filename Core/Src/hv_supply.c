@@ -115,8 +115,6 @@ uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t
 uint16_t HV_SetVoltage(uint16_t value_hvp, uint16_t value_hvm) {
 	current_hvp_val = value_hvp;
 	current_hvm_val = value_hvm;
-    printf("current_hvp_val: %u\r\n", current_hvp_val);
-    printf("current_hvm_val: %u\r\n", current_hvm_val);
 
     // We set the HV to be 20% above target voltage, setting regulator
     // values to original target voltage.
@@ -126,8 +124,8 @@ uint16_t HV_SetVoltage(uint16_t value_hvp, uint16_t value_hvm) {
 	current_hrp_val = (uint16_t) (current_hvp_val * 1.5); 
 	current_hrm_val = (uint16_t) (current_hvm_val * 1.5);
 
-    printf("current_hrp_val: %u\r\n", current_hrp_val);
-    printf("current_hrm_val: %u\r\n", current_hrm_val);
+    printf("Adjusted REG+ DAC Value: %u\r\n", current_hrp_val);
+    printf("Adjusted REG- DAC Value: %u\r\n", current_hrm_val);
 
     return 0; // we don't use this return value?
 }
