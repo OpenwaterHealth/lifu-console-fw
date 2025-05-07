@@ -279,14 +279,6 @@ void HV_Enable(void) {
 
 	printf("Target HV Voltage %d.%02dV\r\n", (int)target_voltage, (int)(target_voltage * 100) % 100);
     printf("Target REG Voltage %d.%02dV\r\n", (int)target_voltage_reg, (int)(target_voltage_reg * 100) % 100);
-	// if(target_voltage>69)
-	// {
-	// 	set_hrp_val = 0;
-	// 	set_hrm_val = 0;
-	// }else{
-	// 	set_hrp_val = 0;
-	// 	set_hrm_val = 0;
-	// }
 
     current_hrp_val = (uint16_t) (target_voltage_reg - hrp_intercept) / hrp_slope;
     current_hrm_val = (uint16_t) (target_voltage_reg - hrm_intercept) / hrm_slope;
