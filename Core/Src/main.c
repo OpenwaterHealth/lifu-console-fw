@@ -133,7 +133,7 @@ int main(void)
   MX_I2C1_Init();
   MX_I2C2_Init();
   MX_SPI1_Init();
-
+  MX_USB_DEVICE_Init();
   MX_USART3_UART_Init();
   MX_TIM14_Init();
   MX_TIM17_Init();
@@ -637,7 +637,8 @@ static void MX_GPIO_Init(void)
                           |SDA_REM_Pin|LD_G_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, USB_RESET_Pin|LED_ON_Pin|HB_LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, USB_RESET_Pin|LED_ON_Pin|ADC_PD_n_Pin|ADC_CS_n_Pin
+                          |HB_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SYS_RDY_GPIO_Port, SYS_RDY_Pin, GPIO_PIN_RESET);
@@ -667,8 +668,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : USB_RESET_Pin LED_ON_Pin HB_LED_Pin SYNC_Pin */
-  GPIO_InitStruct.Pin = USB_RESET_Pin|LED_ON_Pin|HB_LED_Pin|SYNC_Pin;
+  /*Configure GPIO pins : USB_RESET_Pin LED_ON_Pin ADC_PD_n_Pin ADC_CS_n_Pin
+                           HB_LED_Pin SYNC_Pin */
+  GPIO_InitStruct.Pin = USB_RESET_Pin|LED_ON_Pin|ADC_PD_n_Pin|ADC_CS_n_Pin
+                          |HB_LED_Pin|SYNC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -680,12 +683,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(SYS_RDY_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : SMBCLK_Pin */
-  GPIO_InitStruct.Pin = SMBCLK_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(SMBCLK_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : SMBDAT_Pin */
   GPIO_InitStruct.Pin = SMBDAT_Pin;

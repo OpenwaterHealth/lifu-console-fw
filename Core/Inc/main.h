@@ -74,8 +74,10 @@ void Error_Handler(void);
 #define SYS_EN_GPIO_Port GPIOC
 #define LED_ON_Pin GPIO_PIN_10
 #define LED_ON_GPIO_Port GPIOA
-#define SMBCLK_Pin GPIO_PIN_8
-#define SMBCLK_GPIO_Port GPIOA
+#define ADC_PD_n_Pin GPIO_PIN_9
+#define ADC_PD_n_GPIO_Port GPIOA
+#define ADC_CS_n_Pin GPIO_PIN_8
+#define ADC_CS_n_GPIO_Port GPIOA
 #define HV_SHUTDOWN_Pin GPIO_PIN_9
 #define HV_SHUTDOWN_GPIO_Port GPIOC
 #define SMBDAT_Pin GPIO_PIN_1
