@@ -27,7 +27,6 @@
 #include "usbd_cdc_if.h"
 #include "uart_comms.h"
 #include "hv_supply.h"
-#include "max6663.h"
 #include "utils.h"
 
 #include <stdio.h>
@@ -143,8 +142,6 @@ int main(void)
   printf("\033c");
   printf("Open-LIFU Console Controller FW v%d.%d.%d\r\n\r\n",FIRMWARE_VERSION_DATA[0], FIRMWARE_VERSION_DATA[1], FIRMWARE_VERSION_DATA[2]);
   printf("CPU Clock Frequency: %lu MHz\r\n", HAL_RCC_GetSysClockFreq() / 1000000);
-
-  sw_I2C_BUS_Init();
 
   // disable power supply
   HV_Disable();
