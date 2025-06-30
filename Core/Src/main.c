@@ -190,9 +190,12 @@ int main(void)
   HAL_GPIO_WritePin(SYS_RDY_GPIO_Port, SYS_RDY_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(HB_LED_GPIO_Port, HB_LED_Pin, GPIO_PIN_SET);
 
+  HAL_Delay(150);
+
   printf("\r\nTurning 12V on\r\n");
-  HAL_GPIO_WritePin(V12_ENABLE_GPIO_Port, V12_ENABLE_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(V12_ENABLE_GPIO_Port, V12_ENABLE_Pin, GPIO_PIN_SET);
+
+  HAL_Delay(150);
 
   // printf("I2C1 \r\n");
   // I2C_scan(&hi2c1);  // 0x49
