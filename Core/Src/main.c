@@ -26,8 +26,8 @@
 #include "logging.h"
 #include "usbd_cdc_if.h"
 #include "uart_comms.h"
+#include "fan_driver.h"
 #include "hv_supply.h"
-#include "max6663.h"
 #include "utils.h"
 
 #include <stdio.h>
@@ -69,9 +69,11 @@ DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-uint8_t FIRMWARE_VERSION_DATA[3] = {1, 1, 1};
+uint8_t FIRMWARE_VERSION_DATA[3] = {1, 2, 0};
 uint8_t rxBuffer[COMMAND_MAX_SIZE];
 uint8_t txBuffer[COMMAND_MAX_SIZE];
+
+extern FAN_Driver fan[2];
 
 volatile bool _enter_dfu = false;
 /* USER CODE END PV */
@@ -133,7 +135,7 @@ int main(void)
   MX_I2C1_Init();
   MX_I2C2_Init();
   MX_SPI1_Init();
-
+  MX_USB_DEVICE_Init();
   MX_USART3_UART_Init();
   MX_TIM14_Init();
   MX_TIM17_Init();
@@ -144,28 +146,16 @@ int main(void)
   printf("Open-LIFU Console Controller FW v%d.%d.%d\r\n\r\n",FIRMWARE_VERSION_DATA[0], FIRMWARE_VERSION_DATA[1], FIRMWARE_VERSION_DATA[2]);
   printf("CPU Clock Frequency: %lu MHz\r\n", HAL_RCC_GetSysClockFreq() / 1000000);
 
-  sw_I2C_BUS_Init();
-
   // disable power supply
   HV_Disable();
   // clear dac
   HV_ClearDAC();
 
-  I2C_scan(&hi2c1);
-
   HAL_Delay(100);
 
 
-  // uint8_t reg_test = I2C_ReadRegister(MAX6653_TOP_I2C_ADDRESS, 0x3D);
-  // uint8_t reg_test2 = I2C_ReadRegister(MAX6653_BOT_I2C_ADDRESS, 0x3D);
-
-  // printf("DEVICE ID: %d\r\n", reg_test);
-  // printf("DEVICE ID: %d\r\n", reg_test2);
-
-  // I2C_WriteRegister(MAX6653_TOP_I2C_ADDRESS, 0x00, 0x01);
-  // I2C_WriteRegister(MAX6653_TOP_I2C_ADDRESS, 0x20, 0xC0);
-  // I2C_WriteRegister(MAX6653_BOT_I2C_ADDRESS, 0x00, 0x01);
-  // I2C_WriteRegister(MAX6653_BOT_I2C_ADDRESS, 0x20, 0xC0);
+  // FAN_Init(&fan[0], &hi2c2, 0x2C);
+  // FAN_Init(&fan[1], &hi2c2, 0x2C);
 
   System_Enable();
 
@@ -197,11 +187,11 @@ int main(void)
 
   HAL_Delay(150);
 
-  // printf("I2C1 \r\n");
-  // I2C_scan(&hi2c1);  // 0x49
+  printf("I2C1 \r\n");
+  I2C_scan(&hi2c1);  // 0x49
 
-  // printf("I2C2 \r\n");
-  // I2C_scan(&hi2c2);  // 0x6D
+  printf("I2C2 \r\n");
+  I2C_scan(&hi2c2);  // 0x6D
 
   comms_start_task();
 
@@ -432,7 +422,7 @@ static void MX_I2C2_Init(void)
 
   /* USER CODE END I2C2_Init 1 */
   hi2c2.Instance = I2C2;
-  hi2c2.Init.Timing = 0x20303E5D;
+  hi2c2.Init.Timing = 0x10805D88;
   hi2c2.Init.OwnAddress1 = 0;
   hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -644,16 +634,16 @@ static void MX_GPIO_Init(void)
                           |SDA_REM_Pin|LD_G_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, USB_RESET_Pin|LED_ON_Pin|HB_LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, USB_RESET_Pin|LED_ON_Pin|ADC_PD_Pin|HB_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SYS_RDY_GPIO_Port, SYS_RDY_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(CLR_GPIO_Port, CLR_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOA, ADC_CS_Pin|SYNC_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(SYNC_GPIO_Port, SYNC_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(CLR_GPIO_Port, CLR_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pins : LDAC_Pin V12_ENABLE_Pin SYS_EN_Pin HV_SHUTDOWN_Pin
                            HV_ON_Pin SCL_CFG_Pin SDA_REM_Pin LD_B_Pin
@@ -666,16 +656,24 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : V12_PWR_G_Pin V5B_PWR_G_Pin GPIO4_Pin GPIO3_Pin
-                           V5A_PWR_G_Pin PWR_G_Pin GPIO2_Pin */
-  GPIO_InitStruct.Pin = V12_PWR_G_Pin|V5B_PWR_G_Pin|GPIO4_Pin|GPIO3_Pin
-                          |V5A_PWR_G_Pin|PWR_G_Pin|GPIO2_Pin;
+  /*Configure GPIO pins : ADC_OVERFLOW_Pin V12_PWR_G_Pin V5B_PWR_G_Pin GPIO4_Pin
+                           GPIO3_Pin V5A_PWR_G_Pin PWR_G_Pin GPIO2_Pin */
+  GPIO_InitStruct.Pin = ADC_OVERFLOW_Pin|V12_PWR_G_Pin|V5B_PWR_G_Pin|GPIO4_Pin
+                          |GPIO3_Pin|V5A_PWR_G_Pin|PWR_G_Pin|GPIO2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : USB_RESET_Pin LED_ON_Pin HB_LED_Pin SYNC_Pin */
-  GPIO_InitStruct.Pin = USB_RESET_Pin|LED_ON_Pin|HB_LED_Pin|SYNC_Pin;
+  /*Configure GPIO pin : BTN_PUSH_Pin */
+  GPIO_InitStruct.Pin = BTN_PUSH_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(BTN_PUSH_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : USB_RESET_Pin LED_ON_Pin ADC_PD_Pin ADC_CS_Pin
+                           HB_LED_Pin SYNC_Pin */
+  GPIO_InitStruct.Pin = USB_RESET_Pin|LED_ON_Pin|ADC_PD_Pin|ADC_CS_Pin
+                          |HB_LED_Pin|SYNC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -687,18 +685,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(SYS_RDY_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : SMBCLK_Pin */
-  GPIO_InitStruct.Pin = SMBCLK_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(SMBCLK_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : SMBDAT_Pin */
-  GPIO_InitStruct.Pin = SMBDAT_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(SMBDAT_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : CLR_Pin */
   GPIO_InitStruct.Pin = CLR_Pin;
@@ -799,8 +785,7 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.

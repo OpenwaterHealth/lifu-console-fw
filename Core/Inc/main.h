@@ -62,6 +62,10 @@ void Error_Handler(void);
 #define LDAC_GPIO_Port GPIOC
 #define V12_ENABLE_Pin GPIO_PIN_13
 #define V12_ENABLE_GPIO_Port GPIOC
+#define ADC_OVERFLOW_Pin GPIO_PIN_9
+#define ADC_OVERFLOW_GPIO_Port GPIOB
+#define BTN_PUSH_Pin GPIO_PIN_4
+#define BTN_PUSH_GPIO_Port GPIOB
 #define V12_PWR_G_Pin GPIO_PIN_3
 #define V12_PWR_G_GPIO_Port GPIOB
 #define USB_RESET_Pin GPIO_PIN_15
@@ -74,12 +78,12 @@ void Error_Handler(void);
 #define SYS_EN_GPIO_Port GPIOC
 #define LED_ON_Pin GPIO_PIN_10
 #define LED_ON_GPIO_Port GPIOA
-#define SMBCLK_Pin GPIO_PIN_8
-#define SMBCLK_GPIO_Port GPIOA
+#define ADC_PD_Pin GPIO_PIN_9
+#define ADC_PD_GPIO_Port GPIOA
+#define ADC_CS_Pin GPIO_PIN_8
+#define ADC_CS_GPIO_Port GPIOA
 #define HV_SHUTDOWN_Pin GPIO_PIN_9
 #define HV_SHUTDOWN_GPIO_Port GPIOC
-#define SMBDAT_Pin GPIO_PIN_1
-#define SMBDAT_GPIO_Port GPIOC
 #define HV_ON_Pin GPIO_PIN_0
 #define HV_ON_GPIO_Port GPIOC
 #define SCL_CFG_Pin GPIO_PIN_7
