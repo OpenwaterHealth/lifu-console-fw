@@ -10,6 +10,7 @@
 #include "common.h"
 #include "i2c_master.h"
 #include "hv_supply.h"
+#include "fan_driver.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -21,6 +22,7 @@ extern bool _enter_dfu;
 
 extern MAX31875_Init_t temp_sensor_1;
 extern MAX31875_Init_t temp_sensor_2;
+extern FAN_Driver fan[2];
 
 static uint32_t id_words[3] = {0};
 static float ret_voltage = 0;
@@ -145,9 +147,11 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->command = OW_POWER_SET_FAN;
 			if(cmd.addr == 0){
 				last_btFan_speed = cmd.data[0];
+				FAN_SetManualPWM(&fan[0], cmd.data[0]);
 			}
 			else if(cmd.addr == 1){
 				last_tpFan_speed = cmd.data[0];
+				FAN_SetManualPWM(&fan[1], cmd.data[0]);
 			}else{
 				uartResp->packet_type = OW_ERROR;
 				uartResp->data_len = 0;
@@ -158,10 +162,12 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 		case OW_POWER_GET_FAN:
 			uartResp->command = OW_POWER_GET_FAN;
 			if(cmd.addr == 0){
+				last_btFan_speed = FAN_GetPWMDuty(&fan[0]);
 				uartResp->data_len = 1;
 				uartResp->data = (uint8_t *)&last_btFan_speed;
 			}
 			else if(cmd.addr == 1){
+				last_tpFan_speed = FAN_GetPWMDuty(&fan[1]);
 				uartResp->data_len = 1;
 				uartResp->data = (uint8_t *)&last_tpFan_speed;
 			}else{

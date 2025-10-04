@@ -187,11 +187,47 @@ int main(void)
 
   HAL_Delay(150);
 
-  printf("I2C1 \r\n");
-  I2C_scan(&hi2c1);  // 0x49
+  //printf("I2C1 \r\n");
+  //I2C_scan(&hi2c1);  // 0x49
 
   printf("I2C2 \r\n");
   I2C_scan(&hi2c2);  // 0x6D
+
+  // Initialize Bottom Fan
+  FAN_Init(&fan[0], &hi2c2, 0x2C);
+
+  uint8_t fan_btm_dev_id = FAN_ReadDeviceID(&fan[0]);
+  uint8_t fan_btm_mfg_id = FAN_ReadManufacturerID(&fan[0]);
+  if(fan_btm_dev_id != MAX6663_DEVICE_ID && fan_btm_mfg_id != MAX6663_MAN_ID) {
+	  printf("Failed to initialize Top Fan IC\r\n");
+  } else {
+	  printf("Bottom Fan MAX6663 Device ID: 0x%02X, Manufacturer ID: 0x%02X\r\n", fan_btm_dev_id, fan_btm_mfg_id);
+
+	  if(!FAN_EnableMonitoring(&fan[0])){
+		  printf("Failed to enable fan monitoring\r\n");
+	  }
+
+	  FAN_SetManualPWM(&fan[0], 0);
+  }
+
+
+  // Initialize Top Fan
+  FAN_Init(&fan[1], &hi2c2, 0x2D);
+
+  uint8_t fan_top_dev_id = FAN_ReadDeviceID(&fan[1]);
+  uint8_t fan_top_mfg_id = FAN_ReadManufacturerID(&fan[1]);
+  if(fan_top_dev_id != MAX6663_DEVICE_ID && fan_top_mfg_id != MAX6663_MAN_ID) {
+	  printf("Failed to initialize Top Fan IC\r\n");
+  } else {
+	  printf("Top Fan MAX6663 Device ID: 0x%02X, Manufacturer ID: 0x%02X\r\n", fan_top_dev_id, fan_top_mfg_id);
+
+	  if(!FAN_EnableMonitoring(&fan[1])){
+		  printf("Failed to enable fan monitoring\r\n");
+	  }
+
+	  FAN_SetManualPWM(&fan[1], 0);
+  }
+
 
   comms_start_task();
 
