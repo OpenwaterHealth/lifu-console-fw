@@ -45,7 +45,7 @@ static void UART_INTERFACE_SendDMA(UartPacket* pResp)
 	txBuffer[bufferIndex++] = crc & 0xFF;
 
 	txBuffer[bufferIndex++] = OW_END_BYTE;
-
+	// printBuffer(txBuffer, bufferIndex);
 	CDC_Transmit_FS(txBuffer, bufferIndex);
 	// HAL_UART_Transmit_DMA(&huart1, txBuffer, bufferIndex);
 	while(!tx_flag);
