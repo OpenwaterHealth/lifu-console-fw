@@ -791,6 +791,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   if (htim->Instance == TIM17) {
       // Stop the timer to prevent re-triggering
       HAL_TIM_Base_Stop_IT(htim);
+
       if(_enter_dfu){
 		// jump to bootloader DFU
 		// 16k SRAM in address 0x2000 0000 - 0x2000 3FFF

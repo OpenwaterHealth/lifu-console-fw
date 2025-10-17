@@ -237,22 +237,30 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			break;
 		case OW_CMD_RESET:
 			uartResp->command = OW_CMD_RESET;
+			uartResp->addr = 0;
+			uartResp->reserved = 0;
+			uartResp->data_len = 0;
 
 			_enter_dfu = false;
 
 			__HAL_TIM_CLEAR_FLAG(&htim17, TIM_FLAG_UPDATE);
 			__HAL_TIM_SET_COUNTER(&htim17, 0);
+
 			if(HAL_TIM_Base_Start_IT(&htim17) != HAL_OK){
 				uartResp->packet_type = OW_ERROR;
 			}
 			break;
 		case OW_CMD_DFU:
 			uartResp->command = OW_CMD_DFU;
+			uartResp->addr = cmd.addr;
+			uartResp->reserved = cmd.reserved;
+			uartResp->data_len = 0;
 
 			_enter_dfu = true;
 
 			__HAL_TIM_CLEAR_FLAG(&htim17, TIM_FLAG_UPDATE);
 			__HAL_TIM_SET_COUNTER(&htim17, 0);
+
 			if(HAL_TIM_Base_Start_IT(&htim17) != HAL_OK){
 				uartResp->packet_type = OW_ERROR;
 			}
