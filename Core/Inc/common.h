@@ -9,6 +9,7 @@
 #define INC_COMMON_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define COMMAND_MAX_SIZE 2048
 
@@ -93,5 +94,19 @@ typedef struct  {
 	uint8_t* data;
 	uint16_t crc;
 } UartPacket;
+
+typedef struct  {
+	uint32_t magic_num;
+	float hv_settng;
+	bool auto_on;
+	uint8_t reserved;
+	uint8_t reserved1;
+	uint8_t reserved2;
+	uint16_t data_len;
+	uint8_t* data;
+	uint16_t crc;
+} LifuConfig;
+
+
 
 #endif /* INC_COMMON_H_ */

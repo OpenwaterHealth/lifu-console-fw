@@ -22,8 +22,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "common.h"
 #include "i2c_master.h"
 #include "logging.h"
+#include "lifu_config.h"
 #include "usbd_cdc_if.h"
 #include "uart_comms.h"
 #include "fan_driver.h"
@@ -74,6 +76,8 @@ uint8_t rxBuffer[COMMAND_MAX_SIZE];
 uint8_t txBuffer[COMMAND_MAX_SIZE];
 
 extern FAN_Driver fan[2];
+
+LifuConfig config;
 
 volatile bool _enter_dfu = false;
 /* USER CODE END PV */
@@ -152,6 +156,12 @@ int main(void)
   HV_ClearDAC();
 
   HAL_Delay(100);
+
+
+  LIFU_Config_Init();
+
+  // Read values
+  const LifuConfig* cfg = LIFU_Config_Get();
 
 
   // FAN_Init(&fan[0], &hi2c2, 0x2C);
