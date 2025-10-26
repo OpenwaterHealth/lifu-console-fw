@@ -1,288 +1,200 @@
-/*
- * lifu_config.c
- *
- *  Created on: Oct 24, 2025
- *      Author: gvigelet
- */
 #include "lifu_config.h"
-#include <string.h>   // memset, memcpy
-#include "utils.h"    // util_crc16 / util_hw_crc16  (CRC helper)     // uses your existing utils  // (citation in notes)
 
-// ======================== INTERNAL STATE ==========================
+#include <string.h>
+#include <stdbool.h>
 
-static LifuConfig g_cfg;                               // runtime struct (from common.h)
-static uint8_t    g_json[MAX_JSON_BYTES];              // RAM JSON buffer
-static uint16_t   g_json_len = 0;
-static uint32_t   g_seq = 0;
+static lifu_cfg_t g_cfg;
+static bool       g_cfg_loaded = false;
 
-// Optional dirty/debounce
-static bool       s_dirty = false;
-static uint32_t   s_last_change_ms = 0; // requires HAL_GetTick()
-
-// ======================== CRC HELPERS =============================
-//
-// Use your utils.h helpers (SW or HW). If you prefer the hardware CRC, swap the call below.
-//
-static inline uint16_t lifu_crc16(const uint8_t* buf, uint32_t size)
+// ------------------- CRC16-CCITT -------------------
+// CRC-16/CCITT-FALSE: poly=0x1021, init=0xFFFF, no final XOR.
+static uint16_t crc16_ccitt(const uint8_t *data, size_t len)
 {
-    return util_crc16(buf, size);   // or util_hw_crc16((uint8_t*)buf, size);
-}
+    uint16_t crc = 0xFFFFu;
 
-// ======================== UTILITIES ===============================
-
-static inline uint32_t page_addr_of_slot(uint32_t slot_index)
-{
-    return (CFG_PAGE_BASE + (slot_index * CFG_SLOT_SIZE));
-}
-
-static void cfg_defaults(void)
-{
-    memset(&g_cfg, 0, sizeof(g_cfg));
-    g_cfg.magic_num = LIFU_MAGIC;
-    g_cfg.hv_settng = 0.0f;
-    g_cfg.auto_on   = false;
-
-    // If your LifuConfig has hv_enabled, map it here:
-    // g_cfg.hv_enabled = false;
-
-    g_json_len = 0;
-}
-
-static void runtime_from_hdr_json(const lifu_cfg_hdr_t* h, const uint8_t* json)
-{
-    memset(&g_cfg, 0, sizeof(g_cfg));
-    g_cfg.magic_num = h->magic;
-    g_cfg.hv_settng = h->hv_settng;
-    g_cfg.auto_on   = (h->auto_on != 0);
-
-    // Map hv_enabled if present in your runtime LifuConfig
-    // g_cfg.hv_enabled = (h->hv_enabled != 0);
-
-    if (h->data_len > 0 && h->data_len <= MAX_JSON_BYTES && json) {
-        memcpy(g_json, json, h->data_len);
-        g_json_len = h->data_len;
-    } else {
-        g_json_len = 0;
-    }
-}
-
-static void fill_hdr_from_runtime(lifu_cfg_hdr_t* h, uint32_t next_seq, uint16_t json_len)
-{
-    memset(h, 0xFF, sizeof(*h));  // keep erased pattern in spare bytes
-    h->magic       = LIFU_MAGIC;
-    h->version     = LIFU_VER;
-    h->seq         = next_seq;
-    h->hv_settng   = g_cfg.hv_settng;
-    h->hv_enabled  = (uint8_t)(/* g_cfg.hv_enabled ? */ 0 /* replace if you have the field */);
-    h->auto_on     = (uint8_t)(g_cfg.auto_on ? 1 : 0);
-    h->data_len    = json_len;
-    h->crc         = 0;  // will be calculated when assembling the slot buffer
-}
-
-static bool hdr_json_valid(const lifu_cfg_hdr_t* h, const uint8_t* json_bytes)
-{
-    if (h->magic != LIFU_MAGIC)   return false;
-    if (h->version != LIFU_VER)   return false;
-    if (h->data_len > MAX_JSON_BYTES) return false;
-
-    // Compute CRC over header (excluding crc field) + json bytes
-    const uint32_t head_no_crc_len = (uint32_t)offsetof(lifu_cfg_hdr_t, crc);
-    uint16_t crc = lifu_crc16((const uint8_t*)h, head_no_crc_len);
-    if (h->data_len && json_bytes) {
-        // concatenate by computing CRC over a temporary combined buffer (safer & simpler)
-        // But to avoid heap, do a second pass:
-        // We'll emulate concatenation by building a small stack buffer if reasonable.
-        // Since MAX_JSON_BYTES could be up to ~480, stack usage is fine on F0.
-        uint8_t tmp[sizeof(lifu_cfg_hdr_t) + MAX_JSON_BYTES];
-        memcpy(tmp, h, head_no_crc_len);               // header without crc
-        memcpy(tmp + head_no_crc_len, json_bytes, h->data_len);
-        crc = lifu_crc16(tmp, head_no_crc_len + h->data_len);
-    }
-    return (crc == h->crc);
-}
-
-// Return last valid slot index and its header/JSON (if provided).
-// Stops scanning when the first truly empty slot is encountered (first word erased).
-static int find_last_valid(lifu_cfg_hdr_t* out_hdr, uint8_t* out_json)
-{
-    uint8_t slot_buf[CFG_SLOT_SIZE];
-    lifu_cfg_hdr_t* hdr = (lifu_cfg_hdr_t*)slot_buf;
-
-    int last = -1;
-    uint32_t best_seq = 0;
-
-    for (uint32_t i = 0; i < CFG_SLOTS_PER_PAGE; i++) {
-        uint32_t addr = page_addr_of_slot(i);
-
-        // Read the entire slot for simplicity and CRC correctness
-        Flash_Read(addr, (uint32_t*)slot_buf, (uint32_t)(CFG_SLOT_SIZE / 4));
-
-        // If first word is erased, we assume this and subsequent slots are empty (append-only)
-        if (*(uint32_t*)slot_buf == 0xFFFFFFFFU) {
-            break;
-        }
-
-        // Validate the record (header + inline JSON)
-        uint16_t len = hdr->data_len;
-        if (len <= MAX_JSON_BYTES) {
-            const uint8_t* jsonp = slot_buf + sizeof(lifu_cfg_hdr_t);
-            if (hdr_json_valid(hdr, jsonp)) {
-                if (hdr->seq >= best_seq) {
-                    best_seq = hdr->seq;
-                    last = (int)i;
-                    if (out_hdr)  *out_hdr = *hdr;
-                    if (out_json && len) memcpy(out_json, jsonp, len);
-                }
+    for (size_t i = 0; i < len; i++) {
+        crc ^= ((uint16_t)data[i] << 8);
+        for (int b = 0; b < 8; b++) {
+            if (crc & 0x8000u) {
+                crc = (uint16_t)((crc << 1) ^ 0x1021u);
+            } else {
+                crc <<= 1;
             }
         }
     }
-    return last;
+    return crc;
 }
 
-// Find first empty slot (magic erased)
-static int find_first_empty(void)
+static uint16_t lifu_cfg_calc_crc(const lifu_cfg_t *cfg)
 {
-    uint32_t word;
-    for (uint32_t i = 0; i < CFG_SLOTS_PER_PAGE; i++) {
-        uint32_t addr = page_addr_of_slot(i);
-        Flash_Read(addr, &word, 1);
-        if (word == 0xFFFFFFFFU) return (int)i;
+    // compute CRC across everything BEFORE the crc field
+    return crc16_ccitt((const uint8_t *)cfg,
+                       offsetof(lifu_cfg_t, crc));
+}
+
+// ------------------- Helpers -------------------
+
+// Ensure json is NUL-terminated and zero-pad tail so CRC is stable
+static void lifu_cfg_normalize_json(lifu_cfg_t *cfg)
+{
+    cfg->json[LIFU_CFG_JSON_MAX - 1U] = '\0';
+
+    size_t used = strnlen(cfg->json, LIFU_CFG_JSON_MAX);
+    if (used < (LIFU_CFG_JSON_MAX - 1U)) {
+        memset(&cfg->json[used + 1U],
+               0U,
+               (LIFU_CFG_JSON_MAX - 1U) - used);
     }
-    return -1; // no empty (page full)
 }
 
-// Write one slot atomically (header + JSON), bounded to the slot
-static bool write_slot(uint32_t slot_index, const lifu_cfg_hdr_t* hdr_in, const uint8_t* json)
+// Build a clean default config in RAM
+static void lifu_cfg_make_defaults(lifu_cfg_t *dst)
 {
-    uint8_t slot_buf[CFG_SLOT_SIZE];
-    memset(slot_buf, 0xFF, sizeof(slot_buf));
+    memset(dst, 0, sizeof(lifu_cfg_t));
 
-    lifu_cfg_hdr_t hdr = *hdr_in;
-    hdr.crc = 0;
+    dst->magic      = LIFU_MAGIC;
+    dst->version    = LIFU_VER;
+    dst->seq        = 0;
+    dst->hv_settng  = 0;   // uint16_t now
+    dst->hv_enabled = 0;
+    dst->auto_on    = 0;
 
-    // Assemble continuous header(without crc) + json for CRC
-    const uint32_t head_no_crc_len = (uint32_t)offsetof(lifu_cfg_hdr_t, crc);
-    memcpy(slot_buf, &hdr, sizeof(hdr));
-    if (hdr.data_len) {
-        memcpy(slot_buf + sizeof(hdr), json, hdr.data_len);
+    dst->json[0]    = '\0';
+    if (LIFU_CFG_JSON_MAX > 1U) {
+        memset(&dst->json[1],
+               0,
+               LIFU_CFG_JSON_MAX - 1U);
     }
 
-    // Compute CRC across contiguous [header..json], excluding crc field
-    uint8_t crc_buf[sizeof(lifu_cfg_hdr_t) + MAX_JSON_BYTES];
-    memcpy(crc_buf, &hdr, head_no_crc_len);
-    if (hdr.data_len) memcpy(crc_buf + head_no_crc_len, json, hdr.data_len);
-    uint16_t crc = lifu_crc16(crc_buf, head_no_crc_len + hdr.data_len);
-    ((lifu_cfg_hdr_t*)slot_buf)->crc = crc;
-
-    // Program the entire slot
-    uint32_t addr = page_addr_of_slot(slot_index);
-    return (HAL_OK == Flash_Write(addr, (uint32_t*)slot_buf, (uint32_t)(CFG_SLOT_SIZE / 4)));
+    lifu_cfg_normalize_json(dst);
+    dst->crc        = lifu_cfg_calc_crc(dst);
 }
 
-// When page is full: erase page, then seed slot 0 with the new record
-static bool erase_and_seed(const lifu_cfg_hdr_t* hdr, const uint8_t* json)
+// Validate magic, version, CRC, and that JSON is terminated
+static bool lifu_cfg_is_valid(const lifu_cfg_t *cfg)
 {
-    if (HAL_OK != Flash_Erase(CFG_PAGE_BASE, CFG_PAGE_BASE + CFG_PAGE_SIZE))
+    if (cfg->magic   != LIFU_MAGIC) { return false; }
+    if (cfg->version != LIFU_VER)   { return false; }
+
+    // json must contain a '\0' somewhere in range
+    if (memchr(cfg->json, '\0', LIFU_CFG_JSON_MAX) == NULL) {
         return false;
-    return write_slot(0, hdr, json);
-}
-
-// ======================== PUBLIC API ==============================
-
-void LIFU_Config_Init(void)
-{
-    lifu_cfg_hdr_t last_hdr;
-    uint8_t last_json[MAX_JSON_BYTES];
-    int idx = find_last_valid(&last_hdr, last_json);
-
-    if (idx < 0) {
-        // nothing valid -> defaults + seed slot 0
-        cfg_defaults();
-        g_seq = 1;
-
-        lifu_cfg_hdr_t hdr;
-        fill_hdr_from_runtime(&hdr, g_seq, g_json_len);
-        (void)Flash_Erase(CFG_PAGE_BASE, CFG_PAGE_BASE + CFG_PAGE_SIZE);
-        (void)write_slot(0, &hdr, g_json_len ? g_json : NULL);
-        return;
     }
 
-    // Load the latest valid record
-    g_seq = last_hdr.seq;
-    runtime_from_hdr_json(&last_hdr, last_hdr.data_len ? last_json : NULL);
-}
+    uint16_t calc = lifu_cfg_calc_crc(cfg);
+    if (calc != cfg->crc)           { return false; }
 
-const LifuConfig* LIFU_Config_Get(void)
-{
-    return &g_cfg;
-}
-
-bool LIFU_Config_Save(void)
-{
-    if (g_json_len > MAX_JSON_BYTES) return false;
-
-    lifu_cfg_hdr_t hdr;
-    fill_hdr_from_runtime(&hdr, g_seq + 1, g_json_len);
-
-    int empty = find_first_empty();
-    bool ok = false;
-
-    if (empty >= 0) {
-        ok = write_slot((uint32_t)empty, &hdr, g_json_len ? g_json : NULL);
-    } else {
-        // page full -> erase and seed slot 0 with newest
-        ok = erase_and_seed(&hdr, g_json_len ? g_json : NULL);
-    }
-
-    if (ok) {
-        g_seq++;
-    }
-    return ok;
-}
-
-void LIFU_Config_ResetToDefaults(void)
-{
-    cfg_defaults();
-    (void)LIFU_Config_Save();
-}
-
-// ======================== JSON HELPERS ============================
-
-bool LIFU_Config_SetJSON(const uint8_t* data, uint16_t len)
-{
-    if (len > MAX_JSON_BYTES) return false;
-    if (len && data) memcpy(g_json, data, len);
-    g_json_len = len;
     return true;
 }
 
-uint16_t LIFU_Config_GetJSON(uint8_t* out, uint16_t maxlen)
+// Do a complete write of g_cfg into flash page.
+// - bumps seq
+// - normalizes json
+// - recomputes crc
+// - erases page and writes words
+static HAL_StatusTypeDef lifu_cfg_writeback(void)
 {
-    uint16_t n = (g_json_len < maxlen) ? g_json_len : maxlen;
-    if (n && out) memcpy(out, g_json, n);
-    return n;
-}
+    HAL_StatusTypeDef st;
 
-const uint8_t* LIFU_Config_GetJSONPtr(uint16_t* len)
-{
-    if (len) *len = g_json_len;
-    return g_json_len ? g_json : NULL;
-}
+    // bump monotonic sequence
+    g_cfg.seq++;
 
-// ======================== OPTIONAL: DEBOUNCED SAVE ================
+    lifu_cfg_normalize_json(&g_cfg);
+    g_cfg.crc = lifu_cfg_calc_crc(&g_cfg);
 
-void LIFU_Config_MarkDirty(void)
-{
-    s_dirty = true;
-    // HAL_GetTick is available on STM32 HAL
-    s_last_change_ms = HAL_GetTick();
-}
-
-void LIFU_Config_Service(void)
-{
-    if (!s_dirty) return;
-    if ((HAL_GetTick() - s_last_change_ms) >= 250U) {
-        (void)LIFU_Config_Save();
-        s_dirty = false;
+    // Erase page [ADDR_FLASH_PAGE_62 .. ADDR_FLASH_PAGE_63)
+    st = Flash_Erase(LIFU_CFG_PAGE_ADDR, LIFU_CFG_PAGE_END);
+    if (st != HAL_OK) {
+        return st;
     }
+
+    // Program entire struct word-by-word
+    st = Flash_Write(LIFU_CFG_PAGE_ADDR,
+                     (uint32_t *)&g_cfg,
+                     (uint32_t)(sizeof(lifu_cfg_t) / sizeof(uint32_t)));
+
+    return st;
+}
+
+// Raw load from flash into g_cfg
+static void lifu_cfg_load_raw(void)
+{
+    Flash_Read(LIFU_CFG_PAGE_ADDR,
+               (uint32_t *)&g_cfg,
+               (uint32_t)(sizeof(lifu_cfg_t) / sizeof(uint32_t)));
+}
+
+// Ensure g_cfg is initialized and valid
+static void lifu_cfg_ensure_loaded(void)
+{
+    if (g_cfg_loaded) {
+        return;
+    }
+
+    lifu_cfg_load_raw();
+
+    if (!lifu_cfg_is_valid(&g_cfg)) {
+        // First boot or corrupt -> defaults and persist
+        lifu_cfg_make_defaults(&g_cfg);
+        (void)lifu_cfg_writeback();
+    }
+
+    g_cfg_loaded = true;
+}
+
+// ------------------- Public API -------------------
+
+const lifu_cfg_t *lifu_cfg_get(void)
+{
+    lifu_cfg_ensure_loaded();
+    return &g_cfg;
+}
+
+HAL_StatusTypeDef lifu_cfg_snapshot(lifu_cfg_t *out)
+{
+    if (out == NULL) {
+        return HAL_ERROR;
+    }
+
+    lifu_cfg_ensure_loaded();
+    memcpy(out, &g_cfg, sizeof(lifu_cfg_t));
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef lifu_cfg_save(const lifu_cfg_t *new_cfg)
+{
+    lifu_cfg_ensure_loaded();
+
+    // Copy caller-updated fields into our working config.
+    // We *trust* their chosen values for hv_settng/hv_enabled/auto_on/json.
+    // We IGNORE their seq/crc/magic/version and regenerate those.
+
+    g_cfg.magic      = LIFU_MAGIC;
+    g_cfg.version    = LIFU_VER;
+
+    g_cfg.hv_settng  = new_cfg->hv_settng;
+    g_cfg.hv_enabled = new_cfg->hv_enabled;
+    g_cfg.auto_on    = new_cfg->auto_on;
+
+    // Copy JSON safely. Caller might not have padded or '\0' at the end.
+    memcpy(g_cfg.json, new_cfg->json, LIFU_CFG_JSON_MAX);
+    g_cfg.json[LIFU_CFG_JSON_MAX - 1U] = '\0';
+
+    // Now write full page with updated data
+    return lifu_cfg_writeback();
+}
+
+HAL_StatusTypeDef lifu_cfg_commit(void)
+{
+    lifu_cfg_ensure_loaded();
+    // Write current g_cfg (useful if caller directly edited *lifu_cfg_get()).
+    return lifu_cfg_writeback();
+}
+
+HAL_StatusTypeDef lifu_cfg_factory_reset(void)
+{
+    lifu_cfg_ensure_loaded();
+
+    lifu_cfg_make_defaults(&g_cfg);
+    return lifu_cfg_writeback();
 }

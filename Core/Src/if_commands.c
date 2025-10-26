@@ -11,6 +11,7 @@
 #include "i2c_master.h"
 #include "hv_supply.h"
 #include "fan_driver.h"
+#include "lifu_config.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -26,7 +27,6 @@ extern FAN_Driver fan[2];
 
 static uint32_t id_words[3] = {0};
 static float ret_voltage = 0;
-
 volatile float last_temperature1 = 0;
 volatile float last_temperature2 = 0;
 volatile uint8_t last_btFan_speed = 0;
@@ -48,6 +48,12 @@ static void print_uart_packet(const UartPacket* packet) {
 
 static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 {
+
+	lifu_cfg_t cfg;
+	if(lifu_cfg_snapshot(&cfg)!=HAL_OK){
+		printf("error getting config\r\n");
+	}
+
 	switch (cmd.command)
 	{
 		case OW_CMD_PING:
@@ -100,10 +106,18 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 		case OW_POWER_HV_ON:
 			uartResp->command = OW_POWER_HV_ON;
 			HV_Enable();
+			cfg.hv_enabled = 1;
+			if(lifu_cfg_save((const lifu_cfg_t *)&cfg)!= HAL_OK){
+				printf("Failed to save config\r\n");
+			}
 			break;
 		case OW_POWER_HV_OFF:
 			HV_Disable();
 			uartResp->command = OW_POWER_HV_OFF;
+			cfg.hv_enabled = 0;
+			if(lifu_cfg_save((const lifu_cfg_t *)&cfg)!= HAL_OK){
+				printf("Failed to save config\r\n");
+			}
 			break;
 		case OW_POWER_SET_HV:
 			printf("set HV \r\n");
@@ -116,6 +130,10 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 				uint16_t dac_value = ((uint16_t)cmd.data[0] << 8) | (uint16_t)cmd.data[1];
 				HV_SetVoltage(dac_value);
 		        set_use_exact(false);
+				cfg.hv_settng = dac_value;
+				if(lifu_cfg_save((const lifu_cfg_t *)&cfg)!= HAL_OK){
+					printf("Failed to save config\r\n");
+				}
 			}
 			break;
 		case OW_POWER_GET_HV:

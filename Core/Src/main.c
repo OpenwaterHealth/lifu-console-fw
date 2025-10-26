@@ -71,7 +71,7 @@ DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-uint8_t FIRMWARE_VERSION_DATA[3] = {1, 2, 0};
+uint8_t FIRMWARE_VERSION_DATA[3] = {1, 2, 1};
 uint8_t rxBuffer[COMMAND_MAX_SIZE];
 uint8_t txBuffer[COMMAND_MAX_SIZE];
 
@@ -157,12 +157,15 @@ int main(void)
 
   HAL_Delay(100);
 
+  const lifu_cfg_t *cfg = lifu_cfg_get();
 
-  LIFU_Config_Init();
-
-  // Read values
-  const LifuConfig* cfg = LIFU_Config_Get();
-
+  // If the number was negative, make sure the sign is only on the whole part
+  printf("hv_settng=%d hv_enabled=%u auto_on=%u json=%s seq=%lu\r\n",
+		  cfg->hv_settng,
+         cfg->hv_enabled,
+         cfg->auto_on,
+         cfg->json,
+         (unsigned long)cfg->seq);
 
   // FAN_Init(&fan[0], &hi2c2, 0x2C);
   // FAN_Init(&fan[1], &hi2c2, 0x2C);

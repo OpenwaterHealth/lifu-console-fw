@@ -1,114 +1,83 @@
-/*
- * lifu_config.h
- *
- *  Created on: Oct 24, 2025
- *      Author: gvigelet
- */
-
 #ifndef LIFU_CONFIG_H
 #define LIFU_CONFIG_H
 
+#include "stm32f0xx_hal.h"
+#include "flash_eeprom.h"
+#include "memory_map.h"
 #include <stdint.h>
-#include <stdbool.h>
-
-/*
- * Drop-in persistent config with single-page, append-only journal.
- * - Uses Flash_Read/Write/Erase from flash_eeprom.h
- * - Uses util_crc16/util_hw_crc16 from utils.h
- * - Stores a bounded JSON blob inline (data_len + bytes) per record
- *
- * Default config if flash invalid: hv_settng=0.0, hv_enabled=false, auto_on=false
- */
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// ---- Project includes you already have ----
-#include "common.h"         // declares your runtime LifuConfig
-#include "flash_eeprom.h"   // Flash_Read / Flash_Write / Flash_Erase
-
-// ======================== TUNABLE GEOMETRY ========================
-//
-// Configure one (1) flash page reserved for config.
-// Keep CFG_PAGE_BASE page-aligned and set CFG_PAGE_SIZE to actual size.
-//
-// SLOT_SIZE sets the per-record capacity (header + JSON). 512 B is a good default on STM32F0.
-//
-// NOTE: This module NEVER writes outside [CFG_PAGE_BASE, CFG_PAGE_BASE + CFG_PAGE_SIZE).
-//
-#ifndef CFG_PAGE_BASE
-#define CFG_PAGE_BASE      (0x0801F000U)   // example: one 2KB page near the end (adjust for your part)
-#endif
-
-#ifndef CFG_PAGE_SIZE
-#define CFG_PAGE_SIZE      (2048U)         // STM32F072 often uses 2KB pages (confirm for your exact device)
-#endif
-
-#ifndef CFG_SLOT_SIZE
-#define CFG_SLOT_SIZE      (512U)          // one record slot size (must divide page size cleanly)
-#endif
-
-// Compile-time check
-#if (CFG_PAGE_SIZE % CFG_SLOT_SIZE) != 0
-#error "CFG_SLOT_SIZE must evenly divide CFG_PAGE_SIZE"
-#endif
-
-#define CFG_SLOTS_PER_PAGE   (CFG_PAGE_SIZE / CFG_SLOT_SIZE)
-
-// ======================== RECORD FORMAT ===========================
+// Magic/version identifiers stored in flash
 #define LIFU_MAGIC   (0x4C494655UL)  // 'LIFU'
-#define LIFU_VER     (0x00010002UL)  // bump when changing on-flash layout
+#define LIFU_VER     (0x00010002UL)  // bump if layout changes
 
-// On-flash header (fixed prefix of each slot). JSON data follows immediately.
+// Flash layout info: one 2KB page at 0x0801F000
+#define LIFU_CFG_PAGE_ADDR      (ADDR_FLASH_PAGE_62)
+#define LIFU_CFG_PAGE_END       (ADDR_FLASH_PAGE_63)
+#define LIFU_CFG_PAGE_SIZE      (2048U)
+
+// magic(4) + version(4) + seq(4) + hv_settng(2) + hv_enabled(1) + auto_on(1) = 16 bytes
+#define LIFU_CFG_HEADER_SIZE    (16U)
+
+// CRC at end is 2 bytes
+#define LIFU_CFG_CRC_SIZE       (2U)
+
+// The rest of the page is JSON storage (must include '\0'):
+// 2048 - 16 - 2 = 2030
+#define LIFU_CFG_JSON_MAX       (LIFU_CFG_PAGE_SIZE - LIFU_CFG_HEADER_SIZE - LIFU_CFG_CRC_SIZE)
+// -> 2030 bytes
+
+// Persistent config blob that exactly fills one flash page.
 typedef struct __attribute__((packed, aligned(4))) {
-    uint32_t magic;       // LIFU_MAGIC
-    uint32_t version;     // LIFU_VER
-    uint32_t seq;         // monotonic sequence for latest-wins
-    float    hv_settng;   // persisted scalar
-    uint8_t  hv_enabled;  // 0/1
-    uint8_t  auto_on;     // 0/1
-    uint8_t  _rsvd[2];    // pad/alignment
-    uint16_t data_len;    // bytes of JSON following this header in the slot
-    uint16_t crc;         // CRC-16-CCITT over [header..(excluding crc)] + JSON bytes
-} lifu_cfg_hdr_t;
+    uint32_t magic;        // LIFU_MAGIC
+    uint32_t version;      // LIFU_VER
+    uint32_t seq;          // monotonic counter
+    uint16_t hv_settng;    // persisted scalar (user units)
+    uint8_t  hv_enabled;   // 0/1
+    uint8_t  auto_on;      // 0/1
 
-_Static_assert(sizeof(lifu_cfg_hdr_t) % 4 == 0, "header must be word-aligned");
+    char     json[LIFU_CFG_JSON_MAX]; // NUL-terminated text blob
 
-// JSON capacity bounded by the slot size
-#define MAX_JSON_BYTES  ((uint16_t)(CFG_SLOT_SIZE - sizeof(lifu_cfg_hdr_t)))
+    uint16_t crc;          // CRC16-CCITT over bytes [0 .. offsetof(crc)-1]
+} lifu_cfg_t;
 
-// ======================== PUBLIC API ==============================
+// Sanity checks for layout
+_Static_assert(sizeof(lifu_cfg_t) == LIFU_CFG_PAGE_SIZE,
+               "lifu_cfg_t must fill one 2KB flash page");
+_Static_assert((sizeof(lifu_cfg_t) % 4U) == 0U,
+               "lifu_cfg_t size must be 32-bit word aligned for flash writes");
 
-/**
- * Initialize config system:
- *  - scans the single page for the last valid record by seq
- *  - loads it into RAM; if none found => defaults + write seed entry at slot 0
- */
-void LIFU_Config_Init(void);
+// ======================== PUBLIC API ========================
 
-/** Get current runtime config (in RAM). */
-const LifuConfig* LIFU_Config_Get(void);
+// Returns pointer to the live in-RAM copy of the config.
+// On first call, it will load from flash, validate magic/version/CRC,
+// and if invalid it writes factory defaults to flash and returns that.
+const lifu_cfg_t *lifu_cfg_get(void);
 
-/**
- * Save current runtime config + current JSON buffer:
- *  - appends into next free slot
- *  - if page is full, erases page and writes record into slot 0 (seed)
- * Returns true on success.
- */
-bool LIFU_Config_Save(void);
+// Copies the current config into *out so you can edit it offline.
+// Example:
+//    lifu_cfg_t work;
+//    lifu_cfg_snapshot(&work);
+//    work.hv_settng = 123;
+//    lifu_cfg_save(&work);
+HAL_StatusTypeDef lifu_cfg_snapshot(lifu_cfg_t *out);
 
-/** Reset runtime config to defaults and persist immediately (append/seed). */
-void LIFU_Config_ResetToDefaults(void);
+// Saves a modified struct to flash.
+// - You pass in a struct you edited (typically from lifu_cfg_snapshot).
+// - We copy fields we care about into internal storage,
+//   bump seq, recalc CRC, erase/program flash.
+HAL_StatusTypeDef lifu_cfg_save(const lifu_cfg_t *new_cfg);
 
-/** JSON setters/getters (RAM buffer; persisted by LIFU_Config_Save). */
-bool     LIFU_Config_SetJSON(const uint8_t* data, uint16_t len);  // bounds-checked to MAX_JSON_BYTES
-uint16_t LIFU_Config_GetJSON(uint8_t* out, uint16_t maxlen);      // copies out
-const uint8_t* LIFU_Config_GetJSONPtr(uint16_t* len);             // direct ptr to internal buffer (read-only)
+// Commits the *current* live config (as returned by lifu_cfg_get())
+// back to flash. This is only needed if you directly mutate *lifu_cfg_get().
+HAL_StatusTypeDef lifu_cfg_commit(void);
 
-/** Optional: mark/flush helpers if you want debounced saves (not required). */
-void LIFU_Config_MarkDirty(void);
-void LIFU_Config_Service(void);   // call periodically if you use the dirty/debounce pattern
+// Restores factory defaults and writes them to flash.
+HAL_StatusTypeDef lifu_cfg_factory_reset(void);
 
 #ifdef __cplusplus
 }
