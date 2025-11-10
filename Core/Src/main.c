@@ -63,6 +63,7 @@ I2C_HandleTypeDef hi2c2;
 
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim14;
 TIM_HandleTypeDef htim17;
 
@@ -94,13 +95,14 @@ static void MX_SPI1_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM14_Init(void);
 static void MX_TIM17_Init(void);
+static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+static lifu_cfg_t *cfg;
 
 /* USER CODE END 0 */
 
@@ -143,6 +145,7 @@ int main(void)
   MX_USART3_UART_Init();
   MX_TIM14_Init();
   MX_TIM17_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
 
   init_dma_logging();
@@ -157,7 +160,7 @@ int main(void)
 
   HAL_Delay(100);
 
-  const lifu_cfg_t *cfg = lifu_cfg_get();
+  cfg = (lifu_cfg_t *)lifu_cfg_get();
 
   // If the number was negative, make sure the sign is only on the whole part
   printf("hv_settng=%d hv_enabled=%u auto_on=%u json=%s seq=%lu\r\n",
@@ -166,9 +169,6 @@ int main(void)
          cfg->auto_on,
          cfg->json,
          (unsigned long)cfg->seq);
-
-  // FAN_Init(&fan[0], &hi2c2, 0x2C);
-  // FAN_Init(&fan[1], &hi2c2, 0x2C);
 
   System_Enable();
 
@@ -207,7 +207,7 @@ int main(void)
   I2C_scan(&hi2c2);  // 0x6D
 
   // Initialize Bottom Fan
-  FAN_Init(&fan[0], &hi2c2, 0x2C);
+  FAN_Init(&fan[0], &hi2c2, 0x2E);
 
   uint8_t fan_btm_dev_id = FAN_ReadDeviceID(&fan[0]);
   uint8_t fan_btm_mfg_id = FAN_ReadManufacturerID(&fan[0]);
@@ -223,9 +223,8 @@ int main(void)
 	  FAN_SetManualPWM(&fan[0], 0);
   }
 
-
   // Initialize Top Fan
-  FAN_Init(&fan[1], &hi2c2, 0x2D);
+  FAN_Init(&fan[1], &hi2c2, 0x2C);
 
   uint8_t fan_top_dev_id = FAN_ReadDeviceID(&fan[1]);
   uint8_t fan_top_mfg_id = FAN_ReadManufacturerID(&fan[1]);
@@ -544,6 +543,44 @@ static void MX_SPI1_Init(void)
 }
 
 /**
+  * @brief TIM6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM6_Init(void)
+{
+
+  /* USER CODE BEGIN TIM6_Init 0 */
+
+  /* USER CODE END TIM6_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM6_Init 1 */
+
+  /* USER CODE END TIM6_Init 1 */
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 4800-1;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 1000-1;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM6_Init 2 */
+
+  /* USER CODE END TIM6_Init 2 */
+
+}
+
+/**
   * @brief TIM14 Initialization Function
   * @param None
   * @retval None
@@ -793,6 +830,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
   if (htim->Instance == TIM14) {
 	  CDC_Idle_Timer_Handler();
+  }
+
+  if (htim->Instance == TIM6) {
+	  // set hv
+      HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, cfg->hv_settng);
+      HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, cfg->hv_settng);
+
   }
 
   /* USER CODE END Callback 0 */

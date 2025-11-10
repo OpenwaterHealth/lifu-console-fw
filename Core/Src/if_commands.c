@@ -48,12 +48,6 @@ static void print_uart_packet(const UartPacket* packet) {
 
 static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 {
-
-	lifu_cfg_t cfg;
-	if(lifu_cfg_snapshot(&cfg)!=HAL_OK){
-		printf("error getting config\r\n");
-	}
-
 	switch (cmd.command)
 	{
 		case OW_CMD_PING:
@@ -106,18 +100,17 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 		case OW_POWER_HV_ON:
 			uartResp->command = OW_POWER_HV_ON;
 			HV_Enable();
-			cfg.hv_enabled = 1;
-			if(lifu_cfg_save((const lifu_cfg_t *)&cfg)!= HAL_OK){
-				printf("Failed to save config\r\n");
-			}
+
+		    // start timer
+		    HAL_TIM_Base_Start_IT(&htim6);
 			break;
 		case OW_POWER_HV_OFF:
 			HV_Disable();
 			uartResp->command = OW_POWER_HV_OFF;
-			cfg.hv_enabled = 0;
-			if(lifu_cfg_save((const lifu_cfg_t *)&cfg)!= HAL_OK){
-				printf("Failed to save config\r\n");
-			}
+
+		    // start timer
+		    HAL_TIM_Base_Stop_IT(&htim6);
+
 			break;
 		case OW_POWER_SET_HV:
 			printf("set HV \r\n");
@@ -130,10 +123,6 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 				uint16_t dac_value = ((uint16_t)cmd.data[0] << 8) | (uint16_t)cmd.data[1];
 				HV_SetVoltage(dac_value);
 		        set_use_exact(false);
-				cfg.hv_settng = dac_value;
-				if(lifu_cfg_save((const lifu_cfg_t *)&cfg)!= HAL_OK){
-					printf("Failed to save config\r\n");
-				}
 			}
 			break;
 		case OW_POWER_GET_HV:

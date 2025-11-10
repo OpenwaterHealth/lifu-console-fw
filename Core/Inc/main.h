@@ -128,6 +128,7 @@ extern CRC_HandleTypeDef hcrc;
 extern UART_HandleTypeDef huart3;
 #define DEBUG_UART huart3
 
+extern TIM_HandleTypeDef htim6;
 extern TIM_HandleTypeDef htim14;
 extern TIM_HandleTypeDef htim17;
 

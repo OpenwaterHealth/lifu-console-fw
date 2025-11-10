@@ -55,7 +55,7 @@ static void lifu_cfg_make_defaults(lifu_cfg_t *dst)
     dst->magic      = LIFU_MAGIC;
     dst->version    = LIFU_VER;
     dst->seq        = 0;
-    dst->hv_settng  = 0;   // uint16_t now
+    dst->hv_settng  = 0;
     dst->hv_enabled = 0;
     dst->auto_on    = 0;
 
