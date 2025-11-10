@@ -832,13 +832,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	  CDC_Idle_Timer_Handler();
   }
 
-  if (htim->Instance == TIM6) {
-	  // set hv
-      HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, cfg->hv_settng);
-      HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, cfg->hv_settng);
-
-  }
-
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM15)
   {
