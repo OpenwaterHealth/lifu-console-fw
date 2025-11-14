@@ -7,7 +7,7 @@
 
 
 #include "hv_supply.h"
-
+#include "utils.h"
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -33,7 +33,7 @@ float getHVReading() {
 	sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
 	sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
 	HAL_ADC_ConfigChannel(&hadc, &sConfig);
-	HAL_Delay(5);
+    delay_us(1000);
     HAL_ADC_Start(&hadc);  // Start ADC in continuous mode
     HAL_ADC_PollForConversion(&hadc, HAL_MAX_DELAY); // Wait for conversion
     adcValue = HAL_ADC_GetValue(&hadc);
@@ -49,7 +49,7 @@ static HAL_StatusTypeDef HV_DAC_ReadReg(uint32_t *data) {
 
     HAL_GPIO_WritePin(SYNC_GPIO_Port, SYNC_Pin, GPIO_PIN_RESET);
     status = HAL_SPI_Receive(&hspi1, rxBuffer, 4, HAL_MAX_DELAY);
-    HAL_Delay(1);
+    delay_us(1000);
     HAL_GPIO_WritePin(SYNC_GPIO_Port, SYNC_Pin, GPIO_PIN_SET);
 
     if (status == HAL_OK) {
@@ -69,7 +69,7 @@ static HAL_StatusTypeDef HV_DAC_WriteReg(uint32_t data) {
 
     HAL_GPIO_WritePin(SYNC_GPIO_Port, SYNC_Pin, GPIO_PIN_RESET);
     HAL_StatusTypeDef status = HAL_SPI_Transmit(&hspi1, txBuffer, 4, HAL_MAX_DELAY);
-    HAL_Delay(1);
+    delay_us(1000);
     HAL_GPIO_WritePin(SYNC_GPIO_Port, SYNC_Pin, GPIO_PIN_SET);
 
     return status;
@@ -185,7 +185,7 @@ void HV_Enable_Exact(void) {
     	HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, set_hvp_val);
         HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, set_hvm_val);
 
-        HAL_Delay(PAUSE_DURATION_MS);
+        delay_us(PAUSE_DURATION_MS * 1000);
 
     }while (set_hvp_val < current_hvp_val || set_hvm_val < current_hvm_val);
 
@@ -200,7 +200,7 @@ void HV_Enable_Exact(void) {
         HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, set_hrp_val);
         HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, set_hrm_val);
 
-        HAL_Delay(PAUSE_DURATION_MS);
+        delay_us(PAUSE_DURATION_MS * 1000);
 
     }while (set_hrp_val < current_hrp_val || set_hrm_val < current_hrm_val);
 
@@ -280,7 +280,7 @@ void HV_Enable(void) {
         HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, set_hvm_val);
 
         // pause between each step
-        HAL_Delay(PAUSE_DURATION_MS);
+        delay_us(PAUSE_DURATION_MS * 1000);
 
     }while (set_hvp_val < current_hvp_val || set_hvm_val < current_hvm_val);
 
@@ -294,7 +294,7 @@ void HV_Enable(void) {
     	HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, set_hrm_val);
 
     	// pause between each step and allow time to settle prior to reading
-        HAL_Delay(PAUSE_DURATION_MS);
+        delay_us(PAUSE_DURATION_MS * 1000);
 
         // read HV on ADC
         float test_hvReading = getHVReading();
@@ -312,10 +312,18 @@ void HV_Enable(void) {
     HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_RESET);
 
     // pause between each step and allow time to settle
-    HAL_Delay(PAUSE_DURATION_MS);
+    delay_us(PAUSE_DURATION_MS * 1000);
     float hvReading = getHVReading();
     // Integer scaling for 2 decimal places
     printf("HV+ reading: %d.%02dV\r\n", (int)hvReading, (int)(hvReading * 100) % 100);
+}
+
+void set_current_dac(void)
+{
+	HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, current_hvp_val);
+    HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, current_hvm_val);
+	HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, current_hrp_val);
+	HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, current_hrm_val);
 }
 
 void HV_Disable(void) {
@@ -332,11 +340,11 @@ void HV_Disable(void) {
 void HV_ClearDAC(void) {
 	HV_Disable();
     HAL_GPIO_WritePin(CLR_GPIO_Port, CLR_Pin, GPIO_PIN_SET);
-    HAL_Delay(250);
+    delay_us(1000);
     HAL_GPIO_WritePin(CLR_GPIO_Port, CLR_Pin, GPIO_PIN_RESET);
-    HAL_Delay(250);
+    delay_us(1000);
     HAL_GPIO_WritePin(CLR_GPIO_Port, CLR_Pin, GPIO_PIN_SET);
-    HAL_Delay(250);
+    delay_us(1000);
 }
 
 void V12_Enable(void)

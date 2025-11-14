@@ -125,3 +125,30 @@ uint32_t fnv1a_32(const uint8_t *data, size_t len) {
 
     return hash;
 }
+
+void US_Delay_Init(void)
+{
+    HAL_TIM_Base_Start(&US_DELAY_TIMER);
+}
+
+void delay_us(uint32_t us)
+{
+    uint32_t start = __HAL_TIM_GET_COUNTER(&US_DELAY_TIMER);  // current timer value
+
+    // Wait until 'us' ticks have elapsed (1 tick = 1 us)
+    while ((uint32_t)(__HAL_TIM_GET_COUNTER(&US_DELAY_TIMER) - start) < us)
+    {
+        __NOP();
+    }
+}
+
+
+void delay_ms(uint32_t ms)
+{
+	printf("Clock: %ld\r\n", SystemCoreClock);
+    uint32_t delay_cycles = (SystemCoreClock / 1000) * ms;
+    while (delay_cycles--) {
+        __NOP();  // Ensures the loop doesn't get optimized away
+    }
+}
+

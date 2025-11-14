@@ -128,12 +128,13 @@ extern CRC_HandleTypeDef hcrc;
 extern UART_HandleTypeDef huart3;
 #define DEBUG_UART huart3
 
+extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim6;
 extern TIM_HandleTypeDef htim14;
 extern TIM_HandleTypeDef htim17;
 
 #define CDC_TIMER htim14
-
+#define US_DELAY_TIMER htim2
 extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c2;
 

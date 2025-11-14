@@ -48,5 +48,5 @@ uint16_t set_hvm(uint16_t value);
 uint16_t set_hvp(uint16_t value);
 uint16_t set_hrm(uint16_t value);
 uint16_t set_hrp(uint16_t value);
-
+void set_current_dac(void);
 #endif // HV_SUPPLY_MANAGER_H

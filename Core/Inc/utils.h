@@ -20,5 +20,8 @@ uint16_t util_hw_crc16(uint8_t* buf, uint32_t size);
 uint8_t crc_test(void);
 void get_unique_identifier(uint32_t* uid);
 uint32_t fnv1a_32(const uint8_t *data, size_t len);
+void US_Delay_Init(void);
+void delay_us(uint32_t us);
+void delay_ms(uint32_t ms);
 
 #endif /* INC_UTILS_H_ */

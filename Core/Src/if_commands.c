@@ -105,12 +105,10 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 		    HAL_TIM_Base_Start_IT(&htim6);
 			break;
 		case OW_POWER_HV_OFF:
+		    // stop timer
+		    HAL_TIM_Base_Stop_IT(&htim6);
 			HV_Disable();
 			uartResp->command = OW_POWER_HV_OFF;
-
-		    // start timer
-		    HAL_TIM_Base_Stop_IT(&htim6);
-
 			break;
 		case OW_POWER_SET_HV:
 			printf("set HV \r\n");
