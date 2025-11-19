@@ -32,6 +32,8 @@
 #include "hv_supply.h"
 #include "utils.h"
 
+#include "ads8678.h"
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
@@ -107,6 +109,7 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 static lifu_cfg_t *cfg;
+ADS8678__HandleTypeDef adc;
 
 /* USER CODE END 0 */
 
@@ -202,18 +205,26 @@ int main(void)
   HAL_GPIO_WritePin(SYS_RDY_GPIO_Port, SYS_RDY_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(HB_LED_GPIO_Port, HB_LED_Pin, GPIO_PIN_SET);
 
+
+  //printf("I2C1 \r\n");
+  //I2C_scan(&hi2c1);  // 0x49
+
+  // printf("I2C2 \r\n");
+  // I2C_scan(&hi2c2);  // 0x6D
+
+  adc.spi = &hspi1;
+  adc.cs_port = ADC_CS_GPIO_Port;
+  adc.cs_pin = ADC_CS_Pin;
+  adc.rst_port = ADC_PD_GPIO_Port;
+  adc.rst_pin = ADC_PD_Pin;
+  adc.spi_timeout_ms = 100;
+
   HAL_Delay(150);
 
   printf("\r\nTurning 12V on\r\n");
   HAL_GPIO_WritePin(V12_ENABLE_GPIO_Port, V12_ENABLE_Pin, GPIO_PIN_SET);
 
   HAL_Delay(150);
-
-  //printf("I2C1 \r\n");
-  //I2C_scan(&hi2c1);  // 0x49
-
-  printf("I2C2 \r\n");
-  I2C_scan(&hi2c2);  // 0x6D
 
   // Initialize Bottom Fan
   FAN_Init(&fan[0], &hi2c2, 0x2E);
@@ -249,9 +260,26 @@ int main(void)
 	  FAN_SetManualPWM(&fan[1], 0);
   }
 
+  // Initialize the ADS8678 ADC
+  if (ADS8678_Init(&adc) == HAL_OK) {
+      printf("ADS8678 initialized successfully\r\n");
+      
+      // Read channel 4 using manual mode
+      uint16_t ch4_value;
+      if (ADS8678_ReadChannelManual(&adc, 4, &ch4_value) == HAL_OK) {
+          // Convert to voltage: Range is 1.25 * Vref = 1.25 * 4.096V = 5.12V
+          // 14-bit ADC: 0-16383 maps to 0-5.12V
+          float voltage = (float)ch4_value * 5.12f / 16383.0f;
+          printf("Channel 4: %u (0x%04X) = %.3fV\r\n", ch4_value, ch4_value, voltage);
+      } else {
+          printf("Failed to read Channel 4\r\n");
+      }
+
+  } else {
+      printf("Failed to initialize ADS8678\r\n");
+  }
 
   comms_start_task();
-
 
   while (1)
   {

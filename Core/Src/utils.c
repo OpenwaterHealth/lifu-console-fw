@@ -145,7 +145,6 @@ void delay_us(uint32_t us)
 
 void delay_ms(uint32_t ms)
 {
-	printf("Clock: %ld\r\n", SystemCoreClock);
     uint32_t delay_cycles = (SystemCoreClock / 1000) * ms;
     while (delay_cycles--) {
         __NOP();  // Ensures the loop doesn't get optimized away
