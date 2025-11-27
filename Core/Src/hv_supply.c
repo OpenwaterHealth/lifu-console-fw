@@ -419,8 +419,8 @@ void read_all_adc_channels(ADS8678__HandleTypeDef *adc, ADC_ChannelData_t *outpu
     const char* channel_names[8] = {
         "HVP_1",
         "HVP_2",
-        "HVM_2",
         "HVM_1",
+        "HVM_2",
         "12V Line",
         "VCON-A1",
         "VCON-B1",
