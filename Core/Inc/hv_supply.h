@@ -9,6 +9,7 @@
 #define HV_SUPPLY_MANAGER_H
 
 #include "main.h"
+#include "ads8678.h"
 #include <stdbool.h>
 
 // Enum for DAC Channels
@@ -25,6 +26,13 @@ typedef enum {
     DAC_BIT_14 = 14,
     DAC_BIT_16 = 16
 } DAC_BitDepth_t;
+
+// Structure for ADC channel data
+typedef struct {
+    uint16_t raw_values[8];      // Raw ADC values (0-16383)
+    float voltages[8];           // ADC input voltages (0-5.12V)
+    float converted[8];          // Real voltages after conversion factors
+} ADC_ChannelData_t;
 
 // Function Prototypes
 void HV_ReadStatusRegister(uint32_t *status_data);
@@ -49,4 +57,5 @@ uint16_t set_hvp(uint16_t value);
 uint16_t set_hrm(uint16_t value);
 uint16_t set_hrp(uint16_t value);
 void set_current_dac(void);
+void read_all_adc_channels(ADS8678__HandleTypeDef *adc, ADC_ChannelData_t *output);
 #endif // HV_SUPPLY_MANAGER_H

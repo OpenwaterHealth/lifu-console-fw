@@ -10,11 +10,11 @@
 FAN_Driver fan[2];
 
 static bool fan_write(FAN_Driver *dev, uint8_t reg, uint8_t value) {
-    return HAL_I2C_Mem_Write(dev->hi2c, dev->i2c_addr, reg, 1, &value, 1, HAL_MAX_DELAY) == HAL_OK;
+    return HAL_I2C_Mem_Write(dev->hi2c, dev->i2c_addr, reg, 1, &value, 1, 500) == HAL_OK;
 }
 
 static bool fan_read(FAN_Driver *dev, uint8_t reg, uint8_t *value) {
-    return HAL_I2C_Mem_Read(dev->hi2c, dev->i2c_addr, reg, 1, value, 1, HAL_MAX_DELAY) == HAL_OK;
+    return HAL_I2C_Mem_Read(dev->hi2c, dev->i2c_addr, reg, 1, value, 1, 500) == HAL_OK;
 }
 
 void FAN_Init(FAN_Driver *dev, I2C_HandleTypeDef *hi2c, uint8_t addr) {

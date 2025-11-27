@@ -76,7 +76,7 @@ DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-uint8_t FIRMWARE_VERSION_DATA[3] = {9, 2, 1};
+uint8_t FIRMWARE_VERSION_DATA[3] = {1, 2, 2};
 uint8_t rxBuffer[COMMAND_MAX_SIZE];
 uint8_t txBuffer[COMMAND_MAX_SIZE];
 
@@ -109,7 +109,7 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 static lifu_cfg_t *cfg;
-ADS8678__HandleTypeDef adc;
+ADS8678__HandleTypeDef vmon_adc;
 
 /* USER CODE END 0 */
 
@@ -212,12 +212,12 @@ int main(void)
   // printf("I2C2 \r\n");
   // I2C_scan(&hi2c2);  // 0x6D
 
-  adc.spi = &hspi1;
-  adc.cs_port = ADC_CS_GPIO_Port;
-  adc.cs_pin = ADC_CS_Pin;
-  adc.rst_port = ADC_PD_GPIO_Port;
-  adc.rst_pin = ADC_PD_Pin;
-  adc.spi_timeout_ms = 100;
+  vmon_adc.spi = &hspi1;
+  vmon_adc.cs_port = ADC_CS_GPIO_Port;
+  vmon_adc.cs_pin = ADC_CS_Pin;
+  vmon_adc.rst_port = ADC_PD_GPIO_Port;
+  vmon_adc.rst_pin = ADC_PD_Pin;
+  vmon_adc.spi_timeout_ms = 100;
 
   HAL_Delay(150);
 
@@ -261,19 +261,24 @@ int main(void)
   }
 
   // Initialize the ADS8678 ADC
-  if (ADS8678_Init(&adc) == HAL_OK) {
+  if (ADS8678_Init(&vmon_adc) == HAL_OK) {
       printf("ADS8678 initialized successfully\r\n");
-      
+      HAL_Delay(100);
+#if 0
       // Read channel 4 using manual mode
       uint16_t ch4_value;
-      if (ADS8678_ReadChannelManual(&adc, 4, &ch4_value) == HAL_OK) {
-          // Convert to voltage: Range is 1.25 * Vref = 1.25 * 4.096V = 5.12V
+      if (ADS8678_ReadChannelManual(&vmon_adc, 4, &ch4_value) == HAL_OK) {
+          // Convert to voltage: Range is 1.25 * Vref = 1.25 * 5V = 6.25V
           // 14-bit ADC: 0-16383 maps to 0-5.12V
-          float voltage = (float)ch4_value * 5.12f / 16383.0f;
+          float voltage = (float)ch4_value * 6.25f / 16383.0f;
           printf("Channel 4: %u (0x%04X) = %.3fV\r\n", ch4_value, ch4_value, voltage);
       } else {
           printf("Failed to read Channel 4\r\n");
       }
+#endif
+      // Read all ADC channels and display voltages
+      read_all_adc_channels(&vmon_adc, NULL);
+
 
   } else {
       printf("Failed to initialize ADS8678\r\n");

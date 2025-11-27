@@ -392,3 +392,73 @@ bool get12VOnStatus()
         return false;
     }
 }
+
+/**
+ * @brief Read all ADC channels and optionally display or store voltages
+ * @param adc Pointer to ADS8678 device handle
+ * @param output Pointer to output buffer (NULL to print, non-NULL to store data)
+ */
+void read_all_adc_channels(ADS8678__HandleTypeDef *adc, ADC_ChannelData_t *output) {
+    uint16_t adc_values[8];
+    float voltages[8];
+    float converted[8];
+
+    // Conversion factors for each channel
+    const float factors[8] = {
+        0.038462f,  // Ch 0: HVP_1
+        0.090909f,  // Ch 1: HVP_2
+        0.038462f,  // Ch 2: HVM_2
+        0.090909f,  // Ch 3: HVM_1
+        0.375f,     // Ch 4: 12V line
+        1.0f,       // Ch 5: VCON-A1
+        1.0f,       // Ch 6: VCON-B1
+        1.0f        // Ch 7: VCON-C1
+    };
+
+    // Channel names (only needed for printing)
+    const char* channel_names[8] = {
+        "HVP_1",
+        "HVP_2",
+        "HVM_2",
+        "HVM_1",
+        "12V Line",
+        "VCON-A1",
+        "VCON-B1",
+        "VCON-C1"
+    };
+
+    // Read all channels using manual mode
+    for (int i = 0; i < 8; i++) {
+        if (ADS8678_ReadChannelManual(adc, i, &adc_values[i]) == HAL_OK) {
+            // Convert raw ADC value to voltage using the factor
+        	// Convert to voltage: Range is 1.25 * Vref = 4.096V
+            voltages[i] = (float)(adc_values[i]-8192) * 10.240f / 8192;
+            converted[i] = voltages[i] / factors[i];
+        } else {
+            // If read fails, set values to 0
+            adc_values[i] = 0;
+            voltages[i] = 0.0f;
+            converted[i] = 0.0f;
+            if (output == NULL) {
+                printf("Error reading channel %d\r\n", i);
+            }
+        }
+    }
+
+    // If output pointer is NULL, print to console
+    if (output == NULL) {
+        printf("\r\n=== ADC Channel Readings ===\r\n");
+        for (int i = 0; i < 8; i++) {
+            printf("Channel %d (%s): %u (0x%04X) = %.3fV REAL: %.3fV \r\n",
+                   i, channel_names[i], adc_values[i], adc_values[i], voltages[i], converted[i]);
+        }
+        printf("=============================\r\n\r\n");
+    } else {
+        // If output pointer is provided, copy data to it
+        for (int i = 0; i < 8; i++) {
+            output->raw_values[i] = adc_values[i];
+            output->voltages[i] = voltages[i];
+            output->converted[i] = converted[i];
+        }
+    }
+}

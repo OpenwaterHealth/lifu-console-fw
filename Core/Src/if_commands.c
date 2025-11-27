@@ -20,13 +20,14 @@
 
 extern uint8_t FIRMWARE_VERSION_DATA[3];
 extern bool _enter_dfu;
-
+extern ADS8678__HandleTypeDef vmon_adc;
 extern MAX31875_Init_t temp_sensor_1;
 extern MAX31875_Init_t temp_sensor_2;
 extern FAN_Driver fan[2];
 
 static uint32_t id_words[3] = {0};
 static float ret_voltage = 0;
+static ADC_ChannelData_t vmon_adc_data;
 volatile float last_temperature1 = 0;
 volatile float last_temperature2 = 0;
 volatile uint8_t last_btFan_speed = 0;
@@ -297,6 +298,18 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 				uartResp->data_len = 0;
 				uartResp->data = NULL;
 			}
+			break;
+		case OW_POWER_VMON:
+			uartResp->command = OW_POWER_VMON;
+			uartResp->addr = cmd.addr;
+			uartResp->reserved = cmd.reserved;
+			
+			// Read ADC channels into structure
+			read_all_adc_channels(&vmon_adc, &vmon_adc_data);
+			
+			// Send the structure directly as bytes (96 bytes: 8×uint16 + 8×float + 8×float)
+			uartResp->data_len = sizeof(ADC_ChannelData_t);
+			uartResp->data = (uint8_t *)&vmon_adc_data;
 			break;
 		default:
 			uartResp->packet_type = OW_UNKNOWN;
