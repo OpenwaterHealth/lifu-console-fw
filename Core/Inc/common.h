@@ -83,6 +83,8 @@ typedef enum {
 	OW_POWER_GET_12VON = 0x3E,
 	OW_POWER_SET_DACS = 0x3F,
 	OW_POWER_VMON = 0x40,
+	OW_POWER_RAW_DAC = 0x41,
+	OW_POWER_HV_ENABLE = 0x42,
 } UstxPowerCommands;
 
 typedef struct  {

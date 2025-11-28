@@ -264,21 +264,21 @@ HAL_StatusTypeDef ADS8678_Init(ADS8678__HandleTypeDef *dev)
 
     // Configure auto-sequencing for channels 0-4 (like reference code)
     // Channels to enable: CH0, CH1, CH2, CH3, CH4
-    uint8_t auto_seq = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4);
-    status = ADS8678_WriteRegister(dev, ADS8678_REG_AUTO_SEQ_EN, auto_seq);
-    if (status != HAL_OK) {
-        return status;
-    }
+    //uint8_t auto_seq = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3);
+    //status = ADS8678_WriteRegister(dev, ADS8678_REG_AUTO_SEQ_EN, auto_seq);
+    //if (status != HAL_OK) {
+    //    return status;
+    //}
 
     // Power down unused channels (5, 6, 7)
-    uint8_t pwr_down = (1 << 5) | (1 << 6) | (1 << 7);
+    uint8_t pwr_down =  (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4) | (1 << 5) | (1 << 6) | (1 << 7);
     status = ADS8678_WriteRegister(dev, ADS8678_REG_CHNL_PWR_DWN, pwr_down);
     if (status != HAL_OK) {
         return status;
     }
 
     // Set range for active channels (use unipolar 1.25V * Vref = 5.12V with 4.096V ref)
-    for (uint8_t ch = 0; ch < 5; ch++) {
+    for (uint8_t ch = 0; ch < 8; ch++) {
         status = ADS8678_SetChannelRange(dev, ch, ADS8678_RANGE_UNIPOLAR_1_25V);
         if (status != HAL_OK) {
             return status;

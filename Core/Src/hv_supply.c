@@ -151,7 +151,7 @@ uint16_t HV_GetOnVoltage() {
     return (uint16_t)value;
 }
 
-void HV_Enable_Exact(void) {
+void HV_SetandEnable_Exact(void) {
 	printf("Using Exact Function\r\n");
     uint16_t set_hvp_val = 0;
     uint16_t set_hvm_val = 0;
@@ -216,9 +216,9 @@ void HV_Enable_Exact(void) {
 }
 
 
-void HV_Enable(void) {
+void HV_SetandEnable(void) {
 
-	if(_use_exact) return HV_Enable_Exact();
+	if(_use_exact) return HV_SetandEnable_Exact();
 
     uint16_t set_hvp_val = 0;
     uint16_t set_hvm_val = 0;
@@ -255,7 +255,7 @@ void HV_Enable(void) {
     HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, 0);
     HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0);
 
-	// turn HV OFF
+	// enable HV
     HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_RESET);
 
     do{
@@ -324,6 +324,11 @@ void set_current_dac(void)
     HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, current_hvm_val);
 	HV_SetDACValue(DAC_CHANNEL_HVP_REG, DAC_BIT_12, current_hrp_val);
 	HV_SetDACValue(DAC_CHANNEL_HVM_REG, DAC_BIT_12, current_hrm_val);
+}
+
+void HV_Enable(void) {
+	HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_RESET);
 }
 
 void HV_Disable(void) {

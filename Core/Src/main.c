@@ -264,18 +264,6 @@ int main(void)
   if (ADS8678_Init(&vmon_adc) == HAL_OK) {
       printf("ADS8678 initialized successfully\r\n");
       HAL_Delay(100);
-#if 0
-      // Read channel 4 using manual mode
-      uint16_t ch4_value;
-      if (ADS8678_ReadChannelManual(&vmon_adc, 4, &ch4_value) == HAL_OK) {
-          // Convert to voltage: Range is 1.25 * Vref = 1.25 * 5V = 6.25V
-          // 14-bit ADC: 0-16383 maps to 0-5.12V
-          float voltage = (float)ch4_value * 6.25f / 16383.0f;
-          printf("Channel 4: %u (0x%04X) = %.3fV\r\n", ch4_value, ch4_value, voltage);
-      } else {
-          printf("Failed to read Channel 4\r\n");
-      }
-#endif
       // Read all ADC channels and display voltages
       read_all_adc_channels(&vmon_adc, NULL);
 

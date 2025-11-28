@@ -100,7 +100,7 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			break;
 		case OW_POWER_HV_ON:
 			uartResp->command = OW_POWER_HV_ON;
-			HV_Enable();
+			HV_SetandEnable();
 
 		    // start timer
 		    // HAL_TIM_Base_Start_IT(&htim6);
@@ -310,6 +310,32 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			// Send the structure directly as bytes (96 bytes: 8×uint16 + 8×float + 8×float)
 			uartResp->data_len = sizeof(ADC_ChannelData_t);
 			uartResp->data = (uint8_t *)&vmon_adc_data;
+			break;
+		case OW_POWER_HV_ENABLE:
+			uartResp->command = OW_POWER_HV_ENABLE;
+			uartResp->addr = cmd.addr;
+			uartResp->reserved = cmd.reserved;
+
+			if(cmd.addr == 1){
+				HV_Enable();
+			}else{
+				HV_Disable();
+			}
+			break;
+		case OW_POWER_RAW_DAC:
+			uartResp->command = OW_POWER_RAW_DAC;
+			uartResp->addr = cmd.addr;
+			uartResp->reserved = cmd.reserved;
+
+			if(cmd.addr > 3 || cmd.data_len != 2)
+			{
+				uartResp->packet_type = OW_ERROR;
+				uartResp->data_len = 0;
+				uartResp->data = NULL;
+			}else{
+				uint16_t dac_raw = ((uint16_t)cmd.data[0] << 8) | (uint16_t)cmd.data[1];
+				HV_SetDACValue(cmd.addr, DAC_BIT_12, dac_raw);
+			}
 			break;
 		default:
 			uartResp->packet_type = OW_UNKNOWN;
