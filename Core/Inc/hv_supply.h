@@ -37,12 +37,9 @@ typedef struct {
 // Function Prototypes
 void HV_ReadStatusRegister(uint32_t *status_data);
 uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t value);
-uint16_t HV_SetVoltage(uint16_t value);
 uint16_t HV_GetVoltage();
 uint16_t HV_GetOnVoltage();
 void set_use_exact(bool val);
-void HV_SetandEnable(void);
-void HV_SetandEnable_Exact(void);
 void HV_Enable(void);
 void HV_Disable(void);
 void HV_ClearDAC(void);
@@ -50,13 +47,12 @@ void V12_Enable(void);
 void V12_Disable(void);
 bool getHVOnStatus();
 bool get12VOnStatus();
-float getHVReading();
 void System_Disable(void);
 void System_Enable(void);
 uint16_t set_hvm(uint16_t value);
 uint16_t set_hvp(uint16_t value);
-uint16_t set_hrm(uint16_t value);
-uint16_t set_hrp(uint16_t value);
 void set_current_dac(void);
 void read_all_adc_channels(ADS8678__HandleTypeDef *adc, ADC_ChannelData_t *output);
+bool hv_set_voltage(float value);
+
 #endif // HV_SUPPLY_MANAGER_H

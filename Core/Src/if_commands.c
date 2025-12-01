@@ -100,7 +100,7 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			break;
 		case OW_POWER_HV_ON:
 			uartResp->command = OW_POWER_HV_ON;
-			HV_SetandEnable();
+			HV_Enable();
 
 		    // start timer
 		    // HAL_TIM_Base_Start_IT(&htim6);
@@ -112,21 +112,29 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->command = OW_POWER_HV_OFF;
 			break;
 		case OW_POWER_SET_HV:
-			printf("set HV \r\n");
 			uartResp->command = OW_POWER_SET_HV;
 			uartResp->addr = 0;
 			uartResp->reserved = cmd.reserved;
 			uartResp->data_len = 0;
-			if(cmd.data_len == 2)
+			if(cmd.data_len == 4)
 			{
-				uint16_t dac_value = ((uint16_t)cmd.data[0] << 8) | (uint16_t)cmd.data[1];
-				HV_SetVoltage(dac_value);
-		        set_use_exact(false);
+				float set_value = be_bytes_to_float((const uint8_t*)cmd.data, cmd.data_len);
+
+				hv_set_voltage(set_value);
+				// set_use_exact(false);
+			}else{
+				uartResp->packet_type = OW_ERROR;
+				uartResp->data_len = 0;
+				uartResp->data = NULL;
 			}
 			break;
 		case OW_POWER_GET_HV:
 			uartResp->command = OW_POWER_GET_HV;
-			ret_voltage = getHVReading();
+
+			// Read ADC channels into structure
+			read_all_adc_channels(&vmon_adc, &vmon_adc_data);
+
+			ret_voltage = vmon_adc_data.converted[1];
 			uartResp->data_len = 4;
 			uartResp->data = (uint8_t *)&ret_voltage;
 			break;
@@ -279,19 +287,13 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			if(cmd.data_len == 8)
 			{
 				uint16_t hvp_dac_value = ((uint16_t)cmd.data[0] << 8) | (uint16_t)cmd.data[1];
-				uint16_t hvp_dac_reg = ((uint16_t)cmd.data[2] << 8) | (uint16_t)cmd.data[3];
 				uint16_t hvm_dac_value = ((uint16_t)cmd.data[4] << 8) | (uint16_t)cmd.data[5];
-				uint16_t hvm_dac_reg = ((uint16_t)cmd.data[6] << 8) | (uint16_t)cmd.data[7];
 
 		        // Debug print
 		        printf("Received HVP DAC Value: %u (0x%04X)\r\n", hvp_dac_value, hvp_dac_value);
 		        set_hvp(hvp_dac_value);
-		        printf("Received HVP DAC Register: %u (0x%04X)\r\n", hvp_dac_reg, hvp_dac_reg);
-		        set_hrp(hvp_dac_reg);
 		        printf("Received HVM DAC Value: %u (0x%04X)\r\n", hvm_dac_value, hvm_dac_value);
 		        set_hvm(hvm_dac_value);
-		        printf("Received HVM DAC Register: %u (0x%04X)\r\n", hvm_dac_reg, hvm_dac_reg);
-		        set_hrm(hvm_dac_reg);
 		        set_use_exact(true);
 			}else{
 				uartResp->packet_type = OW_ERROR;

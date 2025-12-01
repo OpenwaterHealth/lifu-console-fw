@@ -7,12 +7,22 @@
 
 #include "utils.h"
 #include <stdio.h>
+#include <string.h>
+
 // testing crc calculations
 #define BUFFER_SIZE  9
 static const uint8_t CRC16_DATA8[BUFFER_SIZE] = {0x4D, 0x3C, 0x2B, 0x1A,
 											   0xBE, 0x71, 0xC9, 0x8A,
 											   0x5E};
 uint32_t startTime = 0, endTime = 0, duration = 0;
+
+static inline uint32_t bswap32(uint32_t x)
+{
+    return ((x & 0x000000FFU) << 24) |
+           ((x & 0x0000FF00U) << 8)  |
+           ((x & 0x00FF0000U) >> 8)  |
+           ((x & 0xFF000000U) >> 24);
+}
 
 uint8_t crc_test(){
 	  // Start TIM3
@@ -126,6 +136,22 @@ uint32_t fnv1a_32(const uint8_t *data, size_t len) {
     return hash;
 }
 
+float be_bytes_to_float(const uint8_t *b, size_t len)
+{
+    if (len < 4) return 0.0f;
+
+    /* Build the 32-bit bitpattern from MSB..LSB in the natural numeric order.
+       Do NOT byte-swap this value afterwards. */
+    uint32_t u = ((uint32_t)b[0] << 24) |
+                 ((uint32_t)b[1] << 16) |
+                 ((uint32_t)b[2] << 8)  |
+                  (uint32_t)b[3];
+
+    float f;
+    memcpy(&f, &u, sizeof(f)); /* copy bit-pattern into float (safe, no UB) */
+    return f;
+}
+
 void US_Delay_Init(void)
 {
     HAL_TIM_Base_Start(&US_DELAY_TIMER);
@@ -150,4 +176,3 @@ void delay_ms(uint32_t ms)
         __NOP();  // Ensures the loop doesn't get optimized away
     }
 }
-

@@ -23,5 +23,6 @@ uint32_t fnv1a_32(const uint8_t *data, size_t len);
 void US_Delay_Init(void);
 void delay_us(uint32_t us);
 void delay_ms(uint32_t ms);
+float be_bytes_to_float(const uint8_t *b, size_t len);
 
 #endif /* INC_UTILS_H_ */
