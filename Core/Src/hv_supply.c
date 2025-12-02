@@ -101,10 +101,10 @@ bool hv_set_voltage(float value) {
 	//printf("Set voltage %f POS: 0x%04X  NEG: 0x%04X\r\n", value, current_hvp_val, current_hvm_val);
 
 	// turn HV OFF
-    HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_SET);
-	HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, 0);
-	HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0);
-	delay_ms(100);
+    // HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_SET);
+	// HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, 0);
+	// HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0);
+	// delay_ms(100);
 
 	HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, current_hvp_val);
 	HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, current_hvm_val);
