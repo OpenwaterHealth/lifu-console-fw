@@ -1,0 +1,26 @@
+# Ignore build artifacts
+Debug/*.o
+Debug/*.elf
+Debug/*.hex
+Debug/*.map
+Debug/*.list
+Debug/*.su
+Debug/*.cyclo
+Debug/*.d
+Debug/**/*.o
+Debug/**/*.su
+Debug/**/*.cyclo
+Debug/**/*.d
+
+# Ignore IDE files
+.settings/
+.cproject
+.project
+*.launch
+
+# Ignore git files
+.git/
+.gitignore
+
+# Ignore zip files
+*.zip

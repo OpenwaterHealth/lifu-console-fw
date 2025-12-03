@@ -16,8 +16,8 @@
 #define ADC_MAX 4095.0   // 12-bit ADC resolution
 
 #define DAC_MAX_VALUE 4095
-#define STEP_SIZE 50
-#define PAUSE_DURATION_MS 100  // 500ms pause every STEP_SIZE
+#define STEP_SIZE 100  // Number of steps to ramp up/down
+#define PAUSE_DURATION_MS 15  // 500ms pause every STEP_SIZE
 
 static uint16_t current_hvp_val = 0;
 static uint16_t current_hvm_val = 0;
@@ -106,8 +106,9 @@ bool hv_set_voltage(float value) {
 	// HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0);
 	// delay_ms(100);
 
-	HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, current_hvp_val);
-	HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, current_hvm_val);
+	//HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, current_hvp_val);
+    //delay_ms(250);
+	//HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, current_hvm_val);
     return true;
 }
 
@@ -138,8 +139,42 @@ void set_current_dac(void)
 }
 
 void HV_Enable(void) {
+    printf("HV Enable: Ramping to HVP: 0x%04X HVM: 0x%04X\r\n", current_hvp_val, current_hvm_val);
+    uint16_t step_hvp = current_hvp_val / STEP_SIZE;
+    uint16_t step_hvm = current_hvm_val / STEP_SIZE;
+    uint16_t hvp_value = 0;
+    uint16_t hvm_value = 0;
+    
+    printf("Steps HVP: %d Steps HVM: %d\r\n", step_hvp, step_hvm);
+
+	HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, hvp_value);
+    HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, hvm_value);
+
 	HAL_GPIO_WritePin(HV_SHUTDOWN_GPIO_Port, HV_SHUTDOWN_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_RESET);
+    
+    for (uint16_t i = 1; i <= step_hvp; i++) {
+        hvp_value += STEP_SIZE;
+        if(hvp_value > current_hvp_val)
+        	hvp_value = current_hvp_val;
+        HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, hvp_value);
+        delay_ms(PAUSE_DURATION_MS);
+    }
+    
+    HV_SetDACValue(DAC_CHANNEL_HVP, DAC_BIT_12, current_hvp_val);
+    delay_ms(100);
+
+    for (uint16_t i = 1; i <= step_hvm; i++) {
+        hvm_value += STEP_SIZE;
+        if(hvm_value > current_hvm_val)
+        	hvm_value = current_hvm_val;
+        HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, hvm_value);
+        delay_ms(PAUSE_DURATION_MS);
+    }
+
+    HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, current_hvm_val);
+    delay_ms(100);
+    
 }
 
 void HV_Disable(void) {
