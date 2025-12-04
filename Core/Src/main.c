@@ -31,6 +31,7 @@
 #include "fan_driver.h"
 #include "hv_supply.h"
 #include "utils.h"
+#include "rgb.h"
 
 #include "ads8678.h"
 
@@ -164,6 +165,9 @@ int main(void)
   printf("\033c");
   printf("Open-LIFU Console Controller FW v%d.%d.%d\r\n\r\n",FIRMWARE_VERSION_DATA[0], FIRMWARE_VERSION_DATA[1], FIRMWARE_VERSION_DATA[2]);
   printf("CPU Clock Frequency: %lu MHz\r\n", HAL_RCC_GetSysClockFreq() / 1000000);
+
+  // Initialize RGB LED
+  RGB_Init();
 
   // disable power supply
   HV_Disable();
@@ -976,6 +980,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
+	RGB_Set(RGB_RED);
   __disable_irq();
   while (1)
   {

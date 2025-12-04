@@ -12,6 +12,7 @@
 #include "hv_supply.h"
 #include "fan_driver.h"
 #include "lifu_config.h"
+#include "rgb.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -32,7 +33,6 @@ volatile float last_temperature1 = 0;
 volatile float last_temperature2 = 0;
 volatile uint8_t last_btFan_speed = 0;
 volatile uint8_t last_tpFan_speed = 0;
-volatile uint8_t rgb_state = 2; // 0 = off, 1 == RED, 2 == GREEN, 3 == BLUE
 
 static void print_uart_packet(const UartPacket* packet) {
     printf("ID: 0x%04X\r\n", packet->id);
@@ -101,15 +101,16 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 		case OW_POWER_HV_ON:
 			uartResp->command = OW_POWER_HV_ON;
 			HV_Enable();
-
+			RGB_Set(RGB_BLUE);
 		    // start timer
 		    // HAL_TIM_Base_Start_IT(&htim6);
 			break;
 		case OW_POWER_HV_OFF:
+			uartResp->command = OW_POWER_HV_OFF;
 		    // stop timer
 		    // HAL_TIM_Base_Stop_IT(&htim6);
 			HV_Disable();
-			uartResp->command = OW_POWER_HV_OFF;
+			RGB_Set(RGB_GREEN);
 			break;
 		case OW_POWER_SET_HV:
 			uartResp->command = OW_POWER_SET_HV;
@@ -193,37 +194,15 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			break;
 		case OW_POWER_SET_RGB:
 			uartResp->command = OW_POWER_SET_RGB;
-			if(uartResp->reserved > 3){
+			if (RGB_Set(cmd.reserved) != 0) {
 				uartResp->packet_type = OW_ERROR;
 				uartResp->data_len = 0;
 				uartResp->data = NULL;
 			}
-			else
-			{
-				rgb_state = cmd.reserved;
-				HAL_GPIO_WritePin(LD_R_GPIO_Port, LD_R_Pin, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(LD_G_GPIO_Port, LD_G_Pin, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(LD_B_GPIO_Port, LD_B_Pin, GPIO_PIN_SET);
-				switch(rgb_state)
-				{
-					case 1:
-						HAL_GPIO_WritePin(LD_R_GPIO_Port, LD_R_Pin, GPIO_PIN_RESET);
-					break;
-					case 2:
-						HAL_GPIO_WritePin(LD_G_GPIO_Port, LD_G_Pin, GPIO_PIN_RESET);
-					break;
-					case 3:
-						HAL_GPIO_WritePin(LD_B_GPIO_Port, LD_B_Pin, GPIO_PIN_RESET);
-					break;
-					case 0:
-					default:
-					break;
-				}
-			}
 			break;
 		case OW_POWER_GET_RGB:
 			uartResp->command = OW_POWER_GET_RGB;
-			uartResp->reserved = rgb_state;
+			uartResp->reserved = RGB_Get();
 			break;
 		case OW_POWER_GET_HVON:
 			uartResp->command = OW_POWER_GET_HVON;
