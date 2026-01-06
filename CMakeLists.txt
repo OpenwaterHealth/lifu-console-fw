@@ -45,6 +45,21 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
+    Core/Src/ads8678.c
+    Core/Src/fan_driver.c
+    Core/Src/flash_eeprom.c
+    Core/Src/hv_calibration_coeffs.c
+    Core/Src/hv_supply.c
+    Core/Src/i2c_master.c
+    Core/Src/if_commands.c
+    Core/Src/jsmn.c
+    Core/Src/lifu_config.c
+    Core/Src/logging.c
+    Core/Src/lwrb.c
+    Core/Src/max31875.c
+    Core/Src/rgb.c
+    Core/Src/uart_comms.c
+    Core/Src/utils.c
 )
 
 # Add include paths
@@ -65,4 +80,11 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
+)
+
+# Generate hex and bin files after build
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${CMAKE_PROJECT_NAME}> ${CMAKE_PROJECT_NAME}.hex
+    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${CMAKE_PROJECT_NAME}> ${CMAKE_PROJECT_NAME}.bin
+    COMMENT "Generating .hex and .bin files"
 )
