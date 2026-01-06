@@ -31,7 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "MAX31875.h"
+#include "max31875.h"
 
 /* USER CODE END Includes */
 
