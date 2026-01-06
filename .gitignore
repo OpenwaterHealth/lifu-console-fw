@@ -1,8 +1,11 @@
 /Debug/
 /Release/
+/build/
 /SEMIHOST/
 
 # STM32CubeIDE local machine files
 .settings/*
 .vscode/*
 *.launch
+
+platform.json
