@@ -1,1 +1,6 @@
 /Debug/
+
+build
+/.vscode/
+
+platform.json

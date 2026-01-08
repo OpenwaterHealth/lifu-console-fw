@@ -109,9 +109,12 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->addr = 0;
 			uartResp->reserved = cmd.reserved;
 			uartResp->data_len = 0;
-			if(cmd.data_len == 2)
+			if(cmd.data_len == 4)
 			{
-				uint16_t dac_value = ((uint16_t)cmd.data[0] << 8) | (uint16_t)cmd.data[1];
+				float set_value = be_bytes_to_float((const uint8_t*)cmd.data, cmd.data_len);
+
+            	uint16_t dac_value = (uint16_t)(((set_value) / 162) * 4095);
+
 				HV_SetVoltage(dac_value);
 		        set_use_exact(false);
 			}

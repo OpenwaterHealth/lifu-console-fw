@@ -125,3 +125,19 @@ uint32_t fnv1a_32(const uint8_t *data, size_t len) {
 
     return hash;
 }
+
+float be_bytes_to_float(const uint8_t *b, size_t len)
+{
+    if (len < 4) return 0.0f;
+
+    /* Build the 32-bit bitpattern from MSB..LSB in the natural numeric order.
+       Do NOT byte-swap this value afterwards. */
+    uint32_t u = ((uint32_t)b[0] << 24) |
+                 ((uint32_t)b[1] << 16) |
+                 ((uint32_t)b[2] << 8)  |
+                  (uint32_t)b[3];
+
+    float f;
+    memcpy(&f, &u, sizeof(f)); /* copy bit-pattern into float (safe, no UB) */
+    return f;
+}
