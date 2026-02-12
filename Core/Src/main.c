@@ -77,7 +77,6 @@ DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-uint8_t FIRMWARE_VERSION_DATA[3] = {1, 2, 2};
 uint8_t rxBuffer[COMMAND_MAX_SIZE];
 uint8_t txBuffer[COMMAND_MAX_SIZE];
 
@@ -163,7 +162,12 @@ int main(void)
 
   init_dma_logging();
   printf("\033c");
-  printf("Open-LIFU Console Controller FW v%d.%d.%d\r\n\r\n",FIRMWARE_VERSION_DATA[0], FIRMWARE_VERSION_DATA[1], FIRMWARE_VERSION_DATA[2]);
+  printf("Open-LIFU Console Controller\r\n\r\n");
+  printf("FW: %s (%s)\r\nDate: %s\r\n",
+       FW_VERSION_STRING,
+       FW_SHA_STRING,
+       FW_BUILD_TIME_STRING);
+
   printf("CPU Clock Frequency: %lu MHz\r\n", HAL_RCC_GetSysClockFreq() / 1000000);
 
   // Initialize RGB LED
