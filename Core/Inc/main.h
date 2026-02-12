@@ -48,6 +48,7 @@ extern "C" {
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 
+
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/

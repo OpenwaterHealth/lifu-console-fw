@@ -19,7 +19,6 @@
 #include <stdlib.h>  // For rand() and srand()
 #include <time.h>    // For seeding random number generator
 
-extern uint8_t FIRMWARE_VERSION_DATA[3];
 extern bool _enter_dfu;
 extern ADS8678__HandleTypeDef vmon_adc;
 extern MAX31875_Init_t temp_sensor_1;
@@ -65,8 +64,8 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->command = OW_CMD_VERSION;
 			uartResp->addr = cmd.addr;
 			uartResp->reserved = cmd.reserved;
-			uartResp->data_len = sizeof(FIRMWARE_VERSION_DATA);
-			uartResp->data = FIRMWARE_VERSION_DATA;
+            uartResp->data_len = sizeof(FW_VERSION_STRING);
+            uartResp->data = (uint8_t*)FW_VERSION_STRING;
 			break;
 		case OW_CMD_ECHO:
 			// exact copy
