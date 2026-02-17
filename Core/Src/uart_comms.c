@@ -61,6 +61,7 @@ void comms_start_task() {
 
 	UartPacket cmd;
 	UartPacket resp;
+	memset(&resp, 0, sizeof(UartPacket));
     uint16_t calculated_crc;
     rx_flag = 0;
     tx_flag = 0;
