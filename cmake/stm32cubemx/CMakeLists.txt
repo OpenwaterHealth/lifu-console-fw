@@ -61,6 +61,7 @@ set(STM32_Drivers_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_adc_ex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_crc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_crc_ex.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_iwdg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_spi.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_spi_ex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart.c
