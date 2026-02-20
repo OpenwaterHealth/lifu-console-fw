@@ -49,6 +49,24 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+#define BL_BKP_SIGNATURE     (0x4F57424CU) /* 'OWBL' */
+#define BL_BKP_REQ_DFU_MAGIC (0x21554644U) /* 'DFU!' */
+
+static void bl_bkp_enable(void)
+{
+	__HAL_RCC_PWR_CLK_ENABLE();
+	HAL_PWR_EnableBkUpAccess();
+
+	if ((RCC->BDCR & RCC_BDCR_RTCEN) == 0U)
+	{
+		if ((RCC->BDCR & RCC_BDCR_RTCSEL) == 0U)
+		{
+			/* RTCSEL=10b -> LSI (RCC_BDCR_RTCSEL_1) */
+			MODIFY_REG(RCC->BDCR, RCC_BDCR_RTCSEL, RCC_BDCR_RTCSEL_1);
+		}
+		SET_BIT(RCC->BDCR, RCC_BDCR_RTCEN);
+	}
+}
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -64,8 +82,11 @@ CRC_HandleTypeDef hcrc;
 I2C_HandleTypeDef hi2c1;
 I2C_HandleTypeDef hi2c2;
 
+IWDG_HandleTypeDef hiwdg;
+
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim7;
@@ -102,7 +123,25 @@ static void MX_TIM17_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_IWDG_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
+
+void bootloader_mark_boot_ok(void)
+{
+	bl_bkp_enable();
+	RTC->BKP0R = BL_BKP_SIGNATURE;
+	RTC->BKP2R = 0U; /* clears in-progress/force bits + failure count */
+	RTC->BKP3R = 0U; /* clears last-bad-fw marker */
+	__DSB();
+	__ISB();
+}
+
+static inline void app_iwdg_refresh(void)
+{
+  /* Bootloader enables IWDG before app jump; refresh it periodically. */
+  IWDG->KR = 0xAAAAU;
+}
 
 /* USER CODE END PFP */
 
@@ -148,13 +187,14 @@ int main(void)
   MX_I2C1_Init();
   MX_I2C2_Init();
   MX_SPI1_Init();
-  MX_USB_DEVICE_Init();
   MX_USART3_UART_Init();
   MX_TIM14_Init();
   MX_TIM17_Init();
   MX_TIM6_Init();
   MX_TIM7_Init();
   MX_TIM2_Init();
+  MX_IWDG_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
 
@@ -280,6 +320,12 @@ int main(void)
       printf("Failed to initialize ADS8678\r\n");
   }
 
+  if(HAL_TIM_Base_Start_IT(&htim1) != HAL_OK){
+    Error_Handler();
+  }
+  bootloader_mark_boot_ok();
+  app_iwdg_refresh();
+
   comms_start_task();
 
   while (1)
@@ -287,8 +333,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	HAL_GPIO_TogglePin(HB_LED_GPIO_Port, HB_LED_Pin);
-	HAL_Delay(250);
+    HAL_GPIO_TogglePin(HB_LED_GPIO_Port, HB_LED_Pin);
+    HAL_Delay(250);
   }
   /* USER CODE END 3 */
 }
@@ -307,11 +353,12 @@ void SystemClock_Config(void)
   * in the RCC_OscInitTypeDef structure.
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSI48
-                              |RCC_OSCILLATORTYPE_HSE;
+                              |RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL2;
@@ -541,6 +588,35 @@ static void MX_I2C2_Init(void)
 }
 
 /**
+  * @brief IWDG Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_IWDG_Init(void)
+{
+
+  /* USER CODE BEGIN IWDG_Init 0 */
+
+  /* USER CODE END IWDG_Init 0 */
+
+  /* USER CODE BEGIN IWDG_Init 1 */
+
+  /* USER CODE END IWDG_Init 1 */
+  hiwdg.Instance = IWDG;
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_64;
+  hiwdg.Init.Window = 4095;
+  hiwdg.Init.Reload = 3125;
+  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN IWDG_Init 2 */
+
+  /* USER CODE END IWDG_Init 2 */
+
+}
+
+/**
   * @brief SPI1 Initialization Function
   * @param None
   * @retval None
@@ -577,6 +653,56 @@ static void MX_SPI1_Init(void)
   /* USER CODE BEGIN SPI1_Init 2 */
 
   /* USER CODE END SPI1_Init 2 */
+
+}
+
+/**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 48000-1;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 1000-1;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+  /* Enable TIM1 update IRQ (break/update/trigger/comm)
+     so HAL_TIM_IRQHandler can call the period callback. */
+  HAL_NVIC_SetPriority(TIM1_BRK_UP_TRG_COM_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(TIM1_BRK_UP_TRG_COM_IRQn);
+
+  /* USER CODE END TIM1_Init 2 */
 
 }
 
@@ -938,7 +1064,10 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
-
+  if(htim->Instance == TIM1) {    
+    app_iwdg_refresh();
+  }
+  
   if (htim->Instance == TIM14) {
 	  CDC_Idle_Timer_Handler();
   }
@@ -946,7 +1075,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   if (htim->Instance == TIM6) {
 
   	// set regulator DACs
-	set_current_dac();
+	  set_current_dac();
 
   }
 
@@ -961,13 +1090,20 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       HAL_TIM_Base_Stop_IT(htim);
 
       if(_enter_dfu){
-		// jump to bootloader DFU
-		// 16k SRAM in address 0x2000 0000 - 0x2000 3FFF
-		*((unsigned long *)0x20003FF0) = 0xDEADBEEF;
+        // jump to bootloader DFU
+        // 16k SRAM in address 0x2000 0000 - 0x2000 3FFF
+        //*((unsigned long *)0x20003FF0) = 0xDEADBEEF;
+        
+        bl_bkp_enable();
+        RTC->BKP0R = BL_BKP_SIGNATURE;
+        RTC->BKP1R = BL_BKP_REQ_DFU_MAGIC;     
+
       }
 
       MX_USB_DEVICE_DeInit();
 
+      __DSB();
+      __ISB();   
       delay_ms(200);
 
 	  // Reset the board
