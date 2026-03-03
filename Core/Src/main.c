@@ -1120,10 +1120,14 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-	RGB_Set(RGB_RED);
+	
   __disable_irq();
   while (1)
   {
+    RGB_Set(RGB_BLUE);
+    delay_ms(500);
+    RGB_Set(RGB_OFF);
+    delay_ms(500);
   }
   /* USER CODE END Error_Handler_Debug */
 }

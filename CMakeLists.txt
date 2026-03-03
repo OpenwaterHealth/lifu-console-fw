@@ -22,12 +22,6 @@ endif()
 # Version info: generated at build time via version.h
 # ---------------------------
 
-# Define the build type
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Debug")
-endif()
-
-# Generate version.h at configure time (initial)
 find_package(Git QUIET)
 
 if(GIT_FOUND)
