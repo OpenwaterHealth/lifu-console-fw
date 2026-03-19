@@ -88,10 +88,12 @@
 #define EEPROM_SIZE             			((uint32_t)0xC00)    // in bytes
 
 #define FLASH_START_ADDRESS        			((uint32_t)0x08000000)
-#define EEPROM_START_ADDRESS				((uint32_t)0x08080000)
+#define FLASH_END_ADDRESS				    ((uint32_t)0x08020000)
 #define BOOTLOADER_ADDRESS        			((uint32_t)0x08000000)
-#define APPLICATION_ADDRESS        			((uint32_t)0x08010000)
-#define APPLICATION_ADDRESS2       			((uint32_t)0x08020000)
+#define METADATA_ADDRESS        			((uint32_t)0x08007800)
+#define APPLICATION_ADDRESS     			((uint32_t)0x08008000)
+#define APPLICATION_USER_CONFIG    			((uint32_t)0x0801F800) // 2 KB user config region
+#define APPLICATION_MAX_SIZE                ((uint32_t)(94U * 1024U))
 
 #define SRAM_BASE_ADDRESS       			((uint32_t)0x20000000)
 #define SRAM_SIZE			       			((uint32_t)0x5000)

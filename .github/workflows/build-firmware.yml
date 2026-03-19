@@ -35,7 +35,7 @@ jobs:
             -w /workspace \
             --workdir /workspace \
             ghcr.io/openwaterhealth/stm32-build-env:latest \
-            bash -lc "git config --global --add safe.directory /workspace && cmake --preset Debug && cmake --build build/Debug --config Debug --target all -j 10"
+            bash -lc "git config --global --add safe.directory /workspace && cmake --preset Release && cmake --build build/Release --config Debug --target all -j 10"
 
       # ---------------------------
       # Upload Firmware
@@ -45,8 +45,8 @@ jobs:
         with:
           name: lifu-console-fw
           path: |
-            build/Debug/*.hex
-            build/Debug/*.bin
+            build/Release/*.hex
+            build/Release/*.bin
 
       # ---------------------------
       # Create GitHub Release (tags only)
