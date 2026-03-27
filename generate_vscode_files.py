@@ -210,6 +210,93 @@ EMBED_TEMPLATES = {
             }
         },
         {
+            "label": "CMake: Configure (ReleaseBL)",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--preset",
+                "ReleaseBL"
+            ],
+            "group": "build",
+            "problemMatcher": [],
+            "options": {
+                "env": {
+                    "PATH": "${TOOLCHAIN_BIN_PATH}:${env:PATH}"
+                }
+            }
+        },
+        {
+            "label": "CMake: Build (ReleaseBL)",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "${workspaceFolder}/${BUILD_DIR}/ReleaseBL",
+                "--config",
+                "Release",
+                "--target",
+                "all",
+                "-j",
+                "10"
+            ],
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "dependsOn": [
+                "CMake: Configure (ReleaseBL)"
+            ],
+            "options": {
+                "env": {
+                    "PATH": "${TOOLCHAIN_BIN_PATH}:${env:PATH}"
+                }
+            }
+        },
+        {
+            "label": "CMake: Configure (DebugBL)",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--preset",
+                "DebugBL"
+            ],
+            "group": "build",
+            "problemMatcher": [],
+            "options": {
+                "env": {
+                    "PATH": "${TOOLCHAIN_BIN_PATH}:${env:PATH}"
+                }
+            }
+        },
+        {
+            "label": "CMake: Build (DebugBL)",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "${workspaceFolder}/${BUILD_DIR}/DebugBL",
+                "--config",
+                "Debug",
+                "--target",
+                "all",
+                "-j",
+                "10",
+                "--verbose"
+            ],
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "dependsOn": [
+                "CMake: Configure (DebugBL)"
+            ],
+            "options": {
+                "env": {
+                    "PATH": "${TOOLCHAIN_BIN_PATH}:${env:PATH}"
+                }
+            }
+        },
+        {
             "label": "Flash Firmware (Debug)",
             "type": "shell",
             "command": "${OPENOCD_PATH}",
@@ -252,6 +339,22 @@ EMBED_TEMPLATES = {
             }
         }
         ,
+        {
+            "label": "OpenOCD: Start GDB Server",
+            "type": "shell",
+            "command": "${OPENOCD_PATH}",
+            "args": [
+                "-f",
+                "interface/stlink.cfg",
+                "-f",
+                "target/${STM32_TARGET}"
+            ],
+            "isBackground": true,
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            }
+        },
         {
             "label": "Kill OpenOCD",
             "type": "shell",
