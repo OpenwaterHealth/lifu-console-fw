@@ -78,6 +78,15 @@ enable_language(C ASM)
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME})
 
+# Select linker script (bootloader variants shift app to 0x08008000)
+if(NOT DEFINED FLASH_LINKER_SCRIPT)
+    set(FLASH_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/STM32F072XX_FLASH.ld")
+endif()
+message(STATUS "Linker script: ${FLASH_LINKER_SCRIPT}")
+target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
+    -T "${FLASH_LINKER_SCRIPT}"
+)
+
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
