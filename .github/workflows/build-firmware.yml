@@ -37,13 +37,24 @@ jobs:
             ghcr.io/openwaterhealth/stm32-build-env:latest \
             bash -lc "git config --global --add safe.directory /workspace && cmake --preset Release && cmake --build build/Release --config Debug --target all -j 10"
 
+      - name: Set version
+        id: version
+        run: |
+          # Use tag name as the version when running on a tag, otherwise fall back to git-describe
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          else
+            ver=$(git describe --tags --always --dirty)
+            echo "version=$ver" >> $GITHUB_OUTPUT
+          fi
+
       # ---------------------------
       # Upload Firmware
       # ---------------------------
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lifu-console-fw
+          name: lifu-console-fw-${{ steps.version.outputs.version }}
           path: |
             build/Release/*.hex
             build/Release/*.bin
