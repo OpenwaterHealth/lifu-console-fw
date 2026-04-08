@@ -29,6 +29,7 @@
 #include "hv_supply.h"
 #include "max6663.h"
 #include "utils.h"
+#include "rgb.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -145,6 +146,9 @@ int main(void)
   printf("CPU Clock Frequency: %lu MHz\r\n", HAL_RCC_GetSysClockFreq() / 1000000);
 
   sw_I2C_BUS_Init();
+
+  // Initialize RGB LED
+  RGB_Init();
 
   // disable power supply
   HV_Disable();
@@ -796,6 +800,10 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+    RGB_Set(RGB_BLUE);
+    delay_ms(500);
+    RGB_Set(RGB_OFF);
+    delay_ms(500);
   }
   /* USER CODE END Error_Handler_Debug */
 }

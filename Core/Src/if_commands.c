@@ -10,6 +10,7 @@
 #include "common.h"
 #include "i2c_master.h"
 #include "hv_supply.h"
+#include "rgb.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -98,10 +99,12 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 		case OW_POWER_HV_ON:
 			uartResp->command = OW_POWER_HV_ON;
 			HV_Enable();
+			RGB_Set(RGB_BLUE);
 			break;
 		case OW_POWER_HV_OFF:
 			HV_Disable();
 			uartResp->command = OW_POWER_HV_OFF;
+			RGB_Set(RGB_GREEN);
 			break;
 		case OW_POWER_SET_HV:
 			printf("set HV \r\n");
