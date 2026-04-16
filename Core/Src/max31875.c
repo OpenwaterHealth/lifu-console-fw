@@ -6,6 +6,7 @@
  */
 
 #include "max31875.h"
+#include <math.h>
 
 										// declaration of static variable
 static bool extended_Enable = false;												// declaration & initialization of static boolean variable
@@ -96,15 +97,19 @@ float MAX31875_Get_Temp(MAX31875_Init_t *tempInitDef)
 
 float MAX31875_ReadTemperature(uint8_t address) {
     uint8_t pointer_byte = 0x00;  // Temperature Register
-    uint8_t temp_data[2];
+    uint8_t temp_data[2] = {0};
     int16_t raw_temp;
     float temperature;
 
     // Set pointer register to Temperature Register
-    HAL_I2C_Master_Transmit(&LOCAL_I2C_HANDLE, address << 1, &pointer_byte, 1, HAL_MAX_DELAY);
+    if (HAL_I2C_Master_Transmit(&LOCAL_I2C_HANDLE, address << 1, &pointer_byte, 1, 100) != HAL_OK) {
+        return NAN;
+    }
 
     // Read temperature data
-    HAL_I2C_Master_Receive(&LOCAL_I2C_HANDLE, address << 1, temp_data, 2, HAL_MAX_DELAY);
+    if (HAL_I2C_Master_Receive(&LOCAL_I2C_HANDLE, address << 1, temp_data, 2, 100) != HAL_OK) {
+        return NAN;
+    }
 
     // Convert raw data to temperature
     raw_temp = (temp_data[0] << 8) | temp_data[1];
