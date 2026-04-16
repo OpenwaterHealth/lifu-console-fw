@@ -45,10 +45,25 @@ static void UART_INTERFACE_SendDMA(UartPacket* pResp)
 	txBuffer[bufferIndex++] = crc & 0xFF;
 
 	txBuffer[bufferIndex++] = OW_END_BYTE;
-	// printBuffer(txBuffer, bufferIndex);
-	CDC_Transmit_FS(txBuffer, bufferIndex);
-	// HAL_UART_Transmit_DMA(&huart1, txBuffer, bufferIndex);
-	while(!tx_flag);
+
+	// Re-arm receive BEFORE transmitting the response.
+	// All response data has been copied into txBuffer, so rxBuffer is safe
+	// to reuse.  This eliminates the window where an incoming command from
+	// the host could arrive while read_to_idle_enabled == 0.
+	memset(rxBuffer, 0, sizeof(rxBuffer));
+	rx_flag = 0;
+	CDC_ReceiveToIdle(rxBuffer, COMMAND_MAX_SIZE);
+
+	tx_flag = 0;
+	uint8_t tx_result = CDC_Transmit_FS(txBuffer, bufferIndex);
+	int retries = 1000;
+	while (tx_result == USBD_BUSY && retries-- > 0) {
+		delay_us(100);
+		tx_result = CDC_Transmit_FS(txBuffer, bufferIndex);
+	}
+	if (tx_result == USBD_OK) {
+		while (!tx_flag);
+	}
 }
 
 // This is the FreeRTOS task
@@ -65,8 +80,8 @@ void comms_start_task() {
     uint16_t calculated_crc;
     rx_flag = 0;
     tx_flag = 0;
+    CDC_ReceiveToIdle(rxBuffer, COMMAND_MAX_SIZE);
     while(1) {
-    	CDC_ReceiveToIdle(rxBuffer, COMMAND_MAX_SIZE);
 		while(!rx_flag);
 
         int bufferIndex = 0;
@@ -152,9 +167,6 @@ void comms_start_task() {
 
 NextDataPacket:
 		UART_INTERFACE_SendDMA(&resp);
-		memset(rxBuffer, 0, sizeof(rxBuffer));
-		ptrReceive=0;
-		rx_flag = 0;
     }
 
 }
