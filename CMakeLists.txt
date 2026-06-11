@@ -98,6 +98,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
+    USB_DEVICE/App/usb_events.c
     Core/Src/ads8678.c
     Core/Src/fan_driver.c
     Core/Src/flash_eeprom.c
