@@ -37,4 +37,16 @@ void usb_register_callback(usb_event_t event, usb_event_cb_t cb);
  */
 void usb_notify(usb_event_t event);
 
+/**
+ * @brief  Query whether the USB cable is connected (device enumerated).
+ * @retval 1 if connected, 0 otherwise.
+ */
+uint8_t usb_is_connected(void);
+
+/**
+ * @brief  Query whether the host has opened the VCP (DTR asserted).
+ * @retval 1 if port is open, 0 otherwise.
+ */
+uint8_t usb_is_port_open(void);
+
 #endif /* USB_EVENTS_H */

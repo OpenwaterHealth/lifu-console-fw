@@ -9,6 +9,7 @@
 #include "hv_supply.h"
 #include "utils.h"
 #include "hv_calibration_coeffs.h"
+#include "usb_events.h"
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -139,6 +140,10 @@ void set_current_dac(void)
 }
 
 void HV_Enable(void) {
+    if (!usb_is_port_open()) {
+        printf("HV Enable BLOCKED: USB port not open\r\n");
+        return;
+    }
     printf("HV Enable: Ramping to HVP: 0x%04X HVM: 0x%04X\r\n", current_hvp_val, current_hvm_val);
     uint16_t step_hvp = current_hvp_val / STEP_SIZE;
     uint16_t step_hvm = current_hvm_val / STEP_SIZE;
@@ -186,6 +191,24 @@ void HV_Disable(void) {
     HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0);
 
     HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_SET);
+}
+
+/**
+ * @brief  USB event callback — disables HV when the application disconnects.
+ */
+static void hv_usb_event_cb(usb_event_t event)
+{
+    (void)event;
+    if (getHVOnStatus()) {
+        printf("HV interlock: USB lost — disabling HV\r\n");
+        HV_Disable();
+    }
+}
+
+void HV_RegisterInterlock(void)
+{
+    usb_register_callback(USB_EVENT_PORT_CLOSE, hv_usb_event_cb);
+    usb_register_callback(USB_EVENT_DISCONNECT, hv_usb_event_cb);
 }
 
 void HV_ClearDAC(void) {

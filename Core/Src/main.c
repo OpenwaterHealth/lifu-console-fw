@@ -245,6 +245,8 @@ int main(void)
 
   MX_USB_DEVICE_Init();
 
+  HV_RegisterInterlock();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
