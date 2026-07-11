@@ -53,12 +53,21 @@
 ENTRY(Reset_Handler)
 
 /* Specify the memory areas */
-/* Bootloader variant: application starts after 32K bootloader at 0x08008000 */
-/* Last 2K of flash (0x0801F800-0x0801FFFF) is reserved for user configuration */
+/* SBSFU secure-bootloader variant:
+ *   pages 0-31   0x08000000  64K  bootloader (read-only over DFU)
+ *   pages 32-61  0x08010000  60K  active slot: signed SFU1 header (0x400)
+ *                0x08010400       + application EXECUTES HERE (this script)
+ *   page 62      0x0801F000   2K  LIFU runtime config (lifu_config.c) —
+ *                                 OUTSIDE the slot: the secure bootloader
+ *                                 requires everything in the slot beyond the
+ *                                 signed image to stay erased
+ *   page 63      0x0801F800   2K  user configuration (preserved)
+ * The bootloader relocates the vector table to SRAM (0x20000000) and remaps
+ * SRAM to 0x00000000 before the jump, hence RAM ORIGIN at 0x200000C0. */
 MEMORY
 {
 RAM (xrw)      : ORIGIN = 0x200000C0, LENGTH = 0x3F40
-FLASH (rx)      : ORIGIN = 0x08008000, LENGTH = 94K
+FLASH (rx)      : ORIGIN = 0x08010400, LENGTH = 59K
 }
 
 /* Highest address of the user mode stack */
