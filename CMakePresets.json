@@ -18,14 +18,6 @@
             }
         },
         {
-            "name": "DebugBL",
-            "inherits": "default",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "FLASH_LINKER_SCRIPT": "${sourceDir}/STM32F072XX_FLASH_BL.ld"
-            }
-        },
-        {
             "name": "Release",
             "inherits": "default",
             "cacheVariables": {
@@ -33,11 +25,19 @@
             }
         },
         {
-            "name": "ReleaseBL",
+            "name": "Debug-BareMetal",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "BARE_METAL": "ON"
+            }
+        },
+        {
+            "name": "Release-BareMetal",
             "inherits": "default",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
-                "FLASH_LINKER_SCRIPT": "${sourceDir}/STM32F072XX_FLASH_BL.ld"
+                "BARE_METAL": "ON"
             }
         }
     ],
@@ -47,16 +47,16 @@
             "configurePreset": "Debug"
         },
         {
-            "name": "DebugBL",
-            "configurePreset": "DebugBL"
-        },
-        {
             "name": "Release",
             "configurePreset": "Release"
         },
         {
-            "name": "ReleaseBL",
-            "configurePreset": "ReleaseBL"
+            "name": "Debug-BareMetal",
+            "configurePreset": "Debug-BareMetal"
+        },
+        {
+            "name": "Release-BareMetal",
+            "configurePreset": "Release-BareMetal"
         }
     ]
 }
