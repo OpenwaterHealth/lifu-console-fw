@@ -49,8 +49,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define BL_BKP_SIGNATURE     (0x4F57424CU) /* 'OWBL' */
-#define BL_BKP_REQ_DFU_MAGIC (0x21554644U) /* 'DFU!' */
+#define BL_BKP_SIGNATURE           (0x4F57424CU) /* 'OWBL' */
+#define BL_BKP_REQ_DFU_MAGIC       (0x21554644U) /* 'DFU!' -> Open-LIFU bootloader DFU */
+#define BL_BKP_REQ_STM32_DFU_MAGIC (0x53554644U) /* 'DFUS' -> STM32 system bootloader */
 
 static void bl_bkp_enable(void)
 {
@@ -106,6 +107,8 @@ extern FAN_Driver fan[2];
 LifuConfig config;
 
 volatile bool _enter_dfu = false;
+volatile bool _force_stm32_dfu = false;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -1095,11 +1098,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         // jump to bootloader DFU
         // 16k SRAM in address 0x2000 0000 - 0x2000 3FFF
         //*((unsigned long *)0x20003FF0) = 0xDEADBEEF;
-        
-        bl_bkp_enable();
-        RTC->BKP0R = BL_BKP_SIGNATURE;
-        RTC->BKP1R = BL_BKP_REQ_DFU_MAGIC;     
-
+        if(_force_stm32_dfu){
+          // Force STM32 bootloader DFU
+          bl_bkp_enable();
+          RTC->BKP0R = BL_BKP_SIGNATURE;
+          RTC->BKP1R = BL_BKP_REQ_STM32_DFU_MAGIC;     
+        } else {
+            // Force Open-LIFU bootloader DFU 
+          bl_bkp_enable();
+          RTC->BKP0R = BL_BKP_SIGNATURE;
+          RTC->BKP1R = BL_BKP_REQ_DFU_MAGIC;     
+        }
       }
 
       MX_USB_DEVICE_DeInit();

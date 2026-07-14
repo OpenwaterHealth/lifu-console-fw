@@ -20,6 +20,7 @@
 #include <time.h>    // For seeding random number generator
 
 extern bool _enter_dfu;
+extern bool _force_stm32_dfu;
 extern ADS8678__HandleTypeDef vmon_adc;
 extern MAX31875_Init_t temp_sensor_1;
 extern MAX31875_Init_t temp_sensor_2;
@@ -234,7 +235,6 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->data_len = 0;
 
 			_enter_dfu = false;
-
 			__HAL_TIM_CLEAR_FLAG(&htim17, TIM_FLAG_UPDATE);
 			__HAL_TIM_SET_COUNTER(&htim17, 0);
 
@@ -249,7 +249,11 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->data_len = 0;
 
 			_enter_dfu = true;
-
+			if(cmd.reserved == 0x77){
+				_force_stm32_dfu = true;
+			}else{
+				_force_stm32_dfu = false;
+			}
 			__HAL_TIM_CLEAR_FLAG(&htim17, TIM_FLAG_UPDATE);
 			__HAL_TIM_SET_COUNTER(&htim17, 0);
 
