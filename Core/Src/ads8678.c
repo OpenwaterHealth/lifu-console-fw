@@ -168,7 +168,7 @@ HAL_StatusTypeDef ADS8678_Reset(ADS8678__HandleTypeDef *dev)
  * @param device_id Pointer to store device ID
  * @retval HAL status
  */
-HAL_StatusTypeDef ADS8678_ReadDeviceID(ADS8678__HandleTypeDef *dev, uint16_t *device_id)
+HAL_StatusTypeDef ADS8678_ReadDeviceID(const ADS8678__HandleTypeDef *dev, uint16_t *device_id)
 {
     if (dev == NULL || device_id == NULL) {
         return HAL_ERROR;

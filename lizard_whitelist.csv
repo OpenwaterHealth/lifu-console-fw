@@ -1,0 +1,21 @@
+# lizard complexity/length whitelist (IEC 62304)
+# Structurally large/branchy by design; covered by review + tests.
+# One function name per line (lizard matches on the bare name).
+
+# CubeMX-driven init and main loop (main.c) — length driven by generated
+# peripheral bring-up sequence, not nesting.
+main
+
+# Power command dispatcher (if_commands.c) — flat switch over the JSON
+# command set; length/CCN driven by the number of commands, not nesting.
+POWER_ProcessCommand
+
+# Comms task loop (uart_comms.c) — packet parse/validate/dispatch kept in
+# one loop to preserve the DMA buffer handshake; length 103 vs limit 100.
+comms_start_task
+
+# MAX6663 duty-cycle mapping (fan_driver.c) — flat threshold ladder and
+# 16-case code-to-percent map straight from datasheet Table 9 (CCN from
+# case count, no nesting).
+FAN_SetManualPWM
+FAN_GetPWMDuty

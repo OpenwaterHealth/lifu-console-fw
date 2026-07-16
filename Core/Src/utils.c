@@ -36,7 +36,7 @@ uint8_t crc_test(){
 
 	  endTime = __HAL_TIM_GET_COUNTER(&htim3);
 	  duration = endTime - startTime;
-	  printf("CPU CRC: 0x%04x Duration: %lu us\r\n\r\n", cpu_CRC, duration);
+	  printf("CPU CRC: 0x%04x Duration: %lu us\r\n\r\n", cpu_CRC, (unsigned long)duration);
 
 
 	  // Reset Counter if needed
@@ -48,7 +48,7 @@ uint8_t crc_test(){
 	  uint16_t hw_CRC = util_hw_crc16((uint8_t*)CRC16_DATA8, BUFFER_SIZE);
 	  endTime = __HAL_TIM_GET_COUNTER(&htim3);
 	  duration = endTime - startTime;
-	  printf("HW CRC: 0x%04x Duration: %lu us\r\n\r\n", hw_CRC, duration);
+	  printf("HW CRC: 0x%04x Duration: %lu us\r\n\r\n", hw_CRC, (unsigned long)duration);
 
 	  return cpu_CRC == hw_CRC?0:1;
 }
@@ -112,7 +112,7 @@ uint16_t util_crc16(const uint8_t* buf, uint32_t size) {
 uint16_t util_hw_crc16(uint8_t* buf, uint32_t size)
 {
 	uint32_t uwCRCValue = HAL_CRC_Accumulate(&hcrc, (uint32_t *)buf, size);
-	printf("uwCRCValue 0x%08lx\r\n", uwCRCValue);
+	printf("uwCRCValue 0x%08lx\r\n", (unsigned long)uwCRCValue);
 	return (uint16_t)uwCRCValue;
 }
 

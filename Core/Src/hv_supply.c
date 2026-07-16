@@ -89,6 +89,7 @@ uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t
             return 0;
     }
 
+    // cppcheck-suppress badBitmaskCheck -- 0x0<<28 documents the DAC command field layout
     command = (0x0 << 28) | (0x3 << 24) | (channel << 20) | (value << 4);
     HV_DAC_WriteReg(command);
 
@@ -289,18 +290,6 @@ void read_all_adc_channels(ADS8678__HandleTypeDef *adc, ADC_ChannelData_t *outpu
         1.0f        // Ch 7: VCON-C1
     };
 
-    // Channel names (only needed for printing)
-    const char* channel_names[8] = {
-        "HVP_1",
-        "HVP_2",
-        "HVM_1",
-        "HVM_2",
-        "12V Line",
-        "VCON-A1",
-        "VCON-B1",
-        "VCON-C1"
-    };
-
     // Read all channels using manual mode
     for (int i = 0; i < 8; i++) {
         if (ADS8678_ReadChannelManual(adc, i, &adc_values[i]) == HAL_OK) {
@@ -349,6 +338,17 @@ void read_all_adc_channels(ADS8678__HandleTypeDef *adc, ADC_ChannelData_t *outpu
 
     // If output pointer is NULL, print to console
     if (output == NULL) {
+        // Channel names (only needed for printing)
+        const char* channel_names[8] = {
+            "HVP_1",
+            "HVP_2",
+            "HVM_1",
+            "HVM_2",
+            "12V Line",
+            "VCON-A1",
+            "VCON-B1",
+            "VCON-C1"
+        };
         printf("\r\n=== ADC Channel Readings ===\r\n");
         for (int i = 0; i < 8; i++) {
             printf("Channel %d (%s): %u (0x%04X) = %.3fV REAL: %.3fV \r\n",

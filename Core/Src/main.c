@@ -190,6 +190,7 @@ int main(void)
   MX_I2C1_Init();
   MX_I2C2_Init();
   MX_SPI1_Init();
+  MX_USB_DEVICE_Init();
   MX_USART3_UART_Init();
   MX_TIM14_Init();
   MX_TIM17_Init();
@@ -680,7 +681,7 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 48000-1;
+  htim1.Init.Prescaler = 48000;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 1000-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;

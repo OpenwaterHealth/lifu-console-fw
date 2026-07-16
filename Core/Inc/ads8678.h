@@ -94,7 +94,7 @@ HAL_StatusTypeDef ADS8678_ReadAllChannels(ADS8678__HandleTypeDef *dev, uint16_t 
 HAL_StatusTypeDef ADS8678_WriteCommand(ADS8678__HandleTypeDef *dev, uint16_t command, uint16_t *response);
 HAL_StatusTypeDef ADS8678_WriteRegister(ADS8678__HandleTypeDef *dev, uint16_t reg_addr, uint8_t value);
 HAL_StatusTypeDef ADS8678_ReadRegister(ADS8678__HandleTypeDef *dev, uint16_t reg_addr, uint8_t *value);
-HAL_StatusTypeDef ADS8678_ReadDeviceID(ADS8678__HandleTypeDef *dev, uint16_t *device_id);
+HAL_StatusTypeDef ADS8678_ReadDeviceID(const ADS8678__HandleTypeDef *dev, uint16_t *device_id);
 
 // Power management
 HAL_StatusTypeDef ADS8678_PowerDown(ADS8678__HandleTypeDef *dev);
