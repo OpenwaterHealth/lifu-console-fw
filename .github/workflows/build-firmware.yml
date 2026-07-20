@@ -141,27 +141,37 @@ jobs:
           echo "Bundling open-lifu-console-bl @ $TAG"
 
       # The signer is the SDK's LIFUCrypto — the single source of truth for the
-      # image format and the FwVersion encoding. It runs standalone (only
-      # `cryptography`, no numpy/pandas), so a cone-mode sparse checkout of the
-      # io package is enough. Pin the SDK ref to keep signing reproducible.
-      - name: Fetch signer from openlifu-sdk
-        uses: actions/checkout@v4
-        with:
-          repository: OpenwaterHealth/openlifu-sdk
-          ref: main
-          path: _sdk
-          sparse-checkout: src/openlifu_sdk/io
-
-      - name: Verify signer present
+      # image format and the FwVersion encoding. Install the SDK from the
+      # branch-appropriate published release:
+      #   next        -> latest PRE-RELEASE openlifu-sdk
+      #   main / tags  -> latest stable RELEASE openlifu-sdk
+      # (The bootloader that verifies the image is bundled separately; the SDK
+      # only owns the signing format.)
+      - name: Resolve + install openlifu-sdk (signer)
+        id: sdk
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          SIGNER="_sdk/src/openlifu_sdk/io/LIFUCrypto.py"
-          if [ ! -f "$SIGNER" ]; then
-            echo "::error::$SIGNER not found in the openlifu-sdk checkout" \
-                 "(ref main). Ensure the SDK signer is committed and pushed to" \
-                 "that ref, or update the checkout ref." >&2
+          set -euo pipefail
+          if [[ "${GITHUB_REF_NAME}" == "next" ]]; then
+            SEL='map(select(.isPrerelease)) | .[0].tagName // empty'
+            KIND="pre-release"
+          else
+            SEL='map(select(.isPrerelease | not)) | .[0].tagName // empty'
+            KIND="release"
+          fi
+          TAG=$(gh release list --repo OpenwaterHealth/openlifu-sdk \
+                --json tagName,isPrerelease --jq "$SEL")
+          if [ -z "$TAG" ]; then
+            echo "::error::No openlifu-sdk $KIND found to install." >&2
             exit 1
           fi
-          echo "Signer present: $SIGNER"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Installing openlifu-sdk $KIND @ $TAG"
+          python3 -m pip install --quiet \
+            "openlifu-sdk[crypto] @ git+https://github.com/OpenwaterHealth/openlifu-sdk@${TAG}"
+          # Confirm the signer module imports (also validates the deps).
+          python3 -c "import openlifu_sdk.io.LIFUCrypto as m; print('signer:', m.__file__)"
 
       - name: Download bootloader binary from open-lifu-console-bl release
         env:
@@ -187,7 +197,6 @@ jobs:
           SECOREBIN_AES_KEY: ${{ secrets.SECOREBIN_AES_KEY }}
         run: |
           set -euo pipefail
-          python3 -m pip install --quiet 'cryptography>=41'
           KD="$(mktemp -d)"
           trap 'rm -rf "$KD"' EXIT
           printf '%s\n' "$FW_SIGNING_KEY" > "$KD/ecdsa_private.pem"
@@ -198,10 +207,10 @@ jobs:
           fi
           APP="build/Release/lifu-console-fw.bin"
           test -s "$APP"
-          # The SDK signer runs as a standalone file (guarded imports -> only
-          # needs `cryptography`); --keys is the tmp dir holding the materialised
-          # ecdsa_private.pem + aes128.bin.
-          python3 _sdk/src/openlifu_sdk/io/LIFUCrypto.py sign \
+          # Sign with the installed SDK (openlifu-sdk[crypto], resolved above);
+          # --keys is the tmp dir holding the materialised ecdsa_private.pem +
+          # aes128.bin.
+          python3 -m openlifu_sdk.io.LIFUCrypto sign \
             --keys "$KD" \
             --firmware "$APP" \
             --version "${{ steps.fwver.outputs.verstr }}" \
@@ -327,6 +336,7 @@ jobs:
           echo "**Build SHA:** \`${{ steps.buildmeta.outputs.sha }}\`" >> notes.md
           echo "**Build Time:** ${{ steps.buildmeta.outputs.datetime }}" >> notes.md
           echo "**Bundled bootloader:** \`${{ steps.bl.outputs.tag }}\`" >> notes.md
+          echo "**Signer (openlifu-sdk):** \`${{ steps.sdk.outputs.tag }}\`" >> notes.md
           echo "**Signed version:** \`${{ steps.fwver.outputs.verstr }}\` (FwVersion \`${{ steps.sign.outputs.fwversion }}\`, bitfield)" >> notes.md
 
       - name: Create GitHub Release
