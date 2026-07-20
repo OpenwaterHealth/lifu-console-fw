@@ -79,13 +79,25 @@ jobs:
       - name: Resolve signing version string
         id: fwver
         run: |
+          # Tag build -> that tag. Branch builds derive the version from the
+          # newest matching tag so the image is installable on units at that
+          # anti-rollback floor (instead of always signing as 0.0.1):
+          #   next -> latest PRE-RELEASE (X.Y.Z-rc.N)
+          #   main -> latest RELEASE     (X.Y.Z)
+          # git tag needs full history/tags (fetch-depth: 0, fetch-tags: true).
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             VERSTR="${GITHUB_REF_NAME}"
-          else
-            VERSTR="0.0.1"
+          elif [[ "${GITHUB_REF_NAME}" == "next" ]]; then
+            VERSTR=$(git tag --sort=-creatordate \
+                     | grep -m1 -E '^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$' || true)
+          elif [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            VERSTR=$(git tag --sort=-creatordate \
+                     | grep -m1 -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true)
           fi
+          # Fallback when no matching tag exists yet.
+          VERSTR="${VERSTR:-0.0.1}"
           echo "verstr=$VERSTR" >> "$GITHUB_OUTPUT"
-          echo "Signing version (semver): $VERSTR"
+          echo "Signing version (semver): $VERSTR (ref ${GITHUB_REF_NAME})"
 
       - name: Pull build image
         run: docker pull ghcr.io/openwaterhealth/stm32-build-env:latest
@@ -130,16 +142,26 @@ jobs:
 
       # The signer is the SDK's LIFUCrypto — the single source of truth for the
       # image format and the FwVersion encoding. It runs standalone (only
-      # `cryptography`, no numpy/pandas) so a sparse checkout of the one file
-      # is enough. Pin the SDK ref to keep signing reproducible.
+      # `cryptography`, no numpy/pandas), so a cone-mode sparse checkout of the
+      # io package is enough. Pin the SDK ref to keep signing reproducible.
       - name: Fetch signer from openlifu-sdk
         uses: actions/checkout@v4
         with:
           repository: OpenwaterHealth/openlifu-sdk
           ref: main
           path: _sdk
-          sparse-checkout: src/openlifu_sdk/io/LIFUCrypto.py
-          sparse-checkout-cone-mode: false
+          sparse-checkout: src/openlifu_sdk/io
+
+      - name: Verify signer present
+        run: |
+          SIGNER="_sdk/src/openlifu_sdk/io/LIFUCrypto.py"
+          if [ ! -f "$SIGNER" ]; then
+            echo "::error::$SIGNER not found in the openlifu-sdk checkout" \
+                 "(ref main). Ensure the SDK signer is committed and pushed to" \
+                 "that ref, or update the checkout ref." >&2
+            exit 1
+          fi
+          echo "Signer present: $SIGNER"
 
       - name: Download bootloader binary from open-lifu-console-bl release
         env:
