@@ -120,7 +120,7 @@ static void RGB_RenderPattern(void)
 }
 
 /* Enable the AHB clock of an arbitrary GPIO port (F0 ports) */
-static HAL_StatusTypeDef RGB_EnableGpioClock(GPIO_TypeDef *port)
+static HAL_StatusTypeDef RGB_EnableGpioClock(const GPIO_TypeDef *port)
 {
   if      (port == GPIOA) { __HAL_RCC_GPIOA_CLK_ENABLE(); }
   else if (port == GPIOB) { __HAL_RCC_GPIOB_CLK_ENABLE(); }
@@ -143,7 +143,7 @@ static HAL_StatusTypeDef RGB_EnableGpioClock(GPIO_TypeDef *port)
  * (RM0091): TIM16_UP on DMA1_Channel3 (default, taken by USART3_RX here)
  * or DMA1_Channel4 via the TIM16 DMA remap; TIM1_UP on DMA1_Channel5.
  * Other timers map only to channels this project already uses. */
-static HAL_StatusTypeDef RGB_ResolveTimer(TIM_TypeDef *tim,
+static HAL_StatusTypeDef RGB_ResolveTimer(const TIM_TypeDef *tim,
                                           DMA_Channel_TypeDef **channel)
 {
   if (tim == TIM16)
@@ -172,30 +172,107 @@ static uint32_t RGB_TimerClockHz(void)
   return (ppre < 4U) ? pclk : pclk * 2U;
 }
 
-HAL_StatusTypeDef RGB_Init_Driver(const RGB_Config *cfg)
+/* Structural validity of a config: all pointers present, all three pins on
+ * one port (one DMA channel writes one BSRR register), and no pin shared
+ * between channels. */
+static bool RGB_ConfigValid(const RGB_Config *cfg)
 {
-  GPIO_InitTypeDef     gpio = {0};
-  DMA_Channel_TypeDef *channel;
-
-  if ((cfg == NULL) || (cfg->timer == NULL) ||
-      (cfg->r_port == NULL) || (cfg->g_port == NULL) || (cfg->b_port == NULL))
+  if ((cfg == NULL) || (cfg->timer == NULL))
   {
-    return HAL_ERROR;
+    return false;
   }
-
-  /* One DMA channel writes one BSRR register: all pins on one port, and
-   * no pin sharing between channels */
+  if ((cfg->r_port == NULL) || (cfg->g_port == NULL) || (cfg->b_port == NULL))
+  {
+    return false;
+  }
   if ((cfg->r_port != cfg->g_port) || (cfg->r_port != cfg->b_port))
   {
-    return HAL_ERROR;
+    return false;
   }
-  if ((cfg->r_pin == 0U) || (cfg->g_pin == 0U) || (cfg->b_pin == 0U) ||
-      ((cfg->r_pin & cfg->g_pin) != 0U) || ((cfg->r_pin & cfg->b_pin) != 0U) ||
-      ((cfg->g_pin & cfg->b_pin) != 0U))
+  if ((cfg->r_pin == 0U) || (cfg->g_pin == 0U) || (cfg->b_pin == 0U))
+  {
+    return false;
+  }
+  return ((cfg->r_pin & cfg->g_pin) == 0U) &&
+         ((cfg->r_pin & cfg->b_pin) == 0U) &&
+         ((cfg->g_pin & cfg->b_pin) == 0U);
+}
+
+/* Configure the three LED pins as outputs at their idle (LED-off) level */
+static void RGB_SetupGpio(void)
+{
+  GPIO_InitTypeDef gpio = {0};
+
+  gpio.Pin   = (uint32_t)rgb_state.pin_r | rgb_state.pin_g | rgb_state.pin_b;
+  gpio.Mode  = GPIO_MODE_OUTPUT_PP;
+  gpio.Pull  = GPIO_NOPULL;
+  gpio.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(rgb_state.port, &gpio);
+  HAL_GPIO_WritePin(rgb_state.port, (uint16_t)gpio.Pin,
+                    rgb_state.active_low ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+/* Timer: plain up-counting time base overflowing at STEPS * refresh_hz.
+ *
+ * ORDER MATTERS: this must run BEFORE the DMA channel is configured.
+ * HAL_TIM_Base_Init() on a fresh handle invokes HAL_TIM_Base_MspInit(),
+ * and the CubeMX-generated TIM16 branch there re-runs HAL_DMA_Init() on
+ * this same channel with its own (periph-to-mem, halfword, one-shot)
+ * settings - which would clobber ours if we configured the DMA first. */
+static HAL_StatusTypeDef RGB_SetupTimer(TIM_TypeDef *tim, uint32_t refresh_hz)
+{
+  uint32_t refresh = (refresh_hz != 0U) ? refresh_hz : RGB_DEFAULT_REFRESH_HZ;
+  uint32_t div     = RGB_TimerClockHz() / (RGB_PWM_STEPS * refresh);
+  uint32_t psc     = div >> 16;                 /* 0 unless the clock is huge */
+
+  if (div == 0U)
+  {
+    return HAL_ERROR;                           /* refresh_hz too fast */
+  }
+
+  rgb_htim.Instance               = tim;
+  rgb_htim.Init.Prescaler         = psc;
+  rgb_htim.Init.CounterMode       = TIM_COUNTERMODE_UP;
+  rgb_htim.Init.Period            = (div / (psc + 1U)) - 1U;
+  rgb_htim.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+  rgb_htim.Init.RepetitionCounter = 0;
+  rgb_htim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  return HAL_TIM_Base_Init(&rgb_htim);
+}
+
+/* DMA: memory-to-peripheral, word-wide, circular over the pattern buffer.
+ * No interrupt is enabled - the channel never stops and needs no service.
+ * Configured after the timer (see ordering note above) so the driver's
+ * settings are the ones in force; it owns the channel from here on. */
+static HAL_StatusTypeDef RGB_SetupDma(DMA_Channel_TypeDef *channel)
+{
+  rgb_hdma.Instance                 = channel;
+  rgb_hdma.Init.Direction           = DMA_MEMORY_TO_PERIPH;
+  rgb_hdma.Init.PeriphInc           = DMA_PINC_DISABLE;
+  rgb_hdma.Init.MemInc              = DMA_MINC_ENABLE;
+  rgb_hdma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+  rgb_hdma.Init.MemDataAlignment    = DMA_MDATAALIGN_WORD;
+  rgb_hdma.Init.Mode                = DMA_CIRCULAR;
+  rgb_hdma.Init.Priority            = DMA_PRIORITY_LOW;
+  if (HAL_DMA_Init(&rgb_hdma) != HAL_OK)
   {
     return HAL_ERROR;
   }
 
+  return HAL_DMA_Start(&rgb_hdma,
+                       (uint32_t)rgb_pattern,
+                       (uint32_t)&rgb_state.port->BSRR,
+                       RGB_PWM_STEPS);
+}
+
+HAL_StatusTypeDef RGB_Init_Driver(const RGB_Config *cfg)
+{
+  DMA_Channel_TypeDef *channel;
+
+  if (!RGB_ConfigValid(cfg))
+  {
+    return HAL_ERROR;
+  }
   if (RGB_ResolveTimer(cfg->timer, &channel) != HAL_OK)
   {
     return HAL_ERROR;
@@ -215,65 +292,13 @@ HAL_StatusTypeDef RGB_Init_Driver(const RGB_Config *cfg)
   /* Start dark: state is off, pattern holds every pin's idle level */
   rgb_state.on = false;
   RGB_RenderPattern();
+  RGB_SetupGpio();
 
-  gpio.Pin   = (uint32_t)cfg->r_pin | cfg->g_pin | cfg->b_pin;
-  gpio.Mode  = GPIO_MODE_OUTPUT_PP;
-  gpio.Pull  = GPIO_NOPULL;
-  gpio.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(rgb_state.port, &gpio);
-  HAL_GPIO_WritePin(rgb_state.port, (uint16_t)gpio.Pin,
-                    cfg->active_low ? GPIO_PIN_SET : GPIO_PIN_RESET);
-
-  /* Timer: plain up-counting time base overflowing at STEPS * refresh_hz.
-   *
-   * ORDER MATTERS: this must run BEFORE the DMA channel is configured.
-   * HAL_TIM_Base_Init() on a fresh handle invokes HAL_TIM_Base_MspInit(),
-   * and the CubeMX-generated TIM16 branch there re-runs HAL_DMA_Init() on
-   * this same channel with its own (periph-to-mem, halfword, one-shot)
-   * settings - which would clobber ours if we configured the DMA first. */
-  uint32_t refresh = (cfg->refresh_hz != 0U) ? cfg->refresh_hz
-                                             : RGB_DEFAULT_REFRESH_HZ;
-  uint32_t div     = RGB_TimerClockHz() / (RGB_PWM_STEPS * refresh);
-  uint32_t psc     = div >> 16;                 /* 0 unless the clock is huge */
-
-  if (div == 0U)
-  {
-    return HAL_ERROR;                           /* refresh_hz too fast */
-  }
-
-  rgb_htim.Instance               = cfg->timer;
-  rgb_htim.Init.Prescaler         = psc;
-  rgb_htim.Init.CounterMode       = TIM_COUNTERMODE_UP;
-  rgb_htim.Init.Period            = (div / (psc + 1U)) - 1U;
-  rgb_htim.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
-  rgb_htim.Init.RepetitionCounter = 0;
-  rgb_htim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-  if (HAL_TIM_Base_Init(&rgb_htim) != HAL_OK)
+  if (RGB_SetupTimer(cfg->timer, cfg->refresh_hz) != HAL_OK)
   {
     return HAL_ERROR;
   }
-
-  /* DMA: memory-to-peripheral, word-wide, circular over the pattern buffer.
-   * No interrupt is enabled - the channel never stops and needs no service.
-   * Configured last (see ordering note above) so the driver's settings are
-   * the ones in force; it owns the channel from here on. */
-  rgb_hdma.Instance                 = channel;
-  rgb_hdma.Init.Direction           = DMA_MEMORY_TO_PERIPH;
-  rgb_hdma.Init.PeriphInc           = DMA_PINC_DISABLE;
-  rgb_hdma.Init.MemInc              = DMA_MINC_ENABLE;
-  rgb_hdma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-  rgb_hdma.Init.MemDataAlignment    = DMA_MDATAALIGN_WORD;
-  rgb_hdma.Init.Mode                = DMA_CIRCULAR;
-  rgb_hdma.Init.Priority            = DMA_PRIORITY_LOW;
-  if (HAL_DMA_Init(&rgb_hdma) != HAL_OK)
-  {
-    return HAL_ERROR;
-  }
-
-  if (HAL_DMA_Start(&rgb_hdma,
-                    (uint32_t)rgb_pattern,
-                    (uint32_t)&rgb_state.port->BSRR,
-                    RGB_PWM_STEPS) != HAL_OK)
+  if (RGB_SetupDma(channel) != HAL_OK)
   {
     return HAL_ERROR;
   }
