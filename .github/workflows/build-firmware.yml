@@ -142,18 +142,18 @@ jobs:
 
       # The signer is the SDK's LIFUCrypto — the single source of truth for the
       # image format and the FwVersion encoding. Install the SDK from the
-      # branch-appropriate published release:
-      #   next        -> latest PRE-RELEASE openlifu-sdk
-      #   main / tags  -> latest stable RELEASE openlifu-sdk
+      # build-type-appropriate published release:
+      #   next branch or an rc tag (X.Y.Z-rc.N) -> latest PRE-RELEASE openlifu-sdk
+      #   main branch or a release tag (X.Y.Z)   -> latest stable RELEASE openlifu-sdk
       # (The bootloader that verifies the image is bundled separately; the SDK
       # only owns the signing format.)
-      - name: Resolve + install openlifu-sdk (signer)
+      - name: Resolve openlifu-sdk (signer) release
         id: sdk
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_REF_NAME}" == "next" ]]; then
+          if [[ "${GITHUB_REF_NAME}" == "next" || "${GITHUB_REF_NAME}" =~ -rc\.[0-9]+$ ]]; then
             SEL='map(select(.isPrerelease)) | .[0].tagName // empty'
             KIND="pre-release"
           else
@@ -167,9 +167,14 @@ jobs:
             exit 1
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Installing openlifu-sdk $KIND @ $TAG"
+          echo "kind=$KIND" >> "$GITHUB_OUTPUT"
+          echo "Resolved openlifu-sdk $KIND @ $TAG (ref ${GITHUB_REF_NAME})"
+
+      - name: Install openlifu-sdk (signer)
+        run: |
+          set -euo pipefail
           python3 -m pip install --quiet \
-            "openlifu-sdk[crypto] @ git+https://github.com/OpenwaterHealth/openlifu-sdk@${TAG}"
+            "openlifu-sdk[crypto] @ git+https://github.com/OpenwaterHealth/openlifu-sdk@${{ steps.sdk.outputs.tag }}"
           # Confirm the signer module imports (also validates the deps).
           python3 -c "import openlifu_sdk.io.LIFUCrypto as m; print('signer:', m.__file__)"
 
