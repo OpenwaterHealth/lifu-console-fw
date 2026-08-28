@@ -225,6 +225,17 @@ jobs:
             --dir _artifacts --clobber
           test -s _artifacts/lifu-console-bl.bin
 
+      - name: Set version
+        id: version
+        run: |
+          # Use tag name as the version when running on a tag, otherwise fall back to git-describe
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          else
+            ver=$(git describe --tags --always --dirty)
+            echo "version=$ver" >> $GITHUB_OUTPUT
+          fi
+
       # ---------------------------
       # Sign the slot image with the ECDSA private key (+ AES key) from secrets.
       # Keys are materialised only into a tmp dir and removed after use; they are
@@ -307,8 +318,7 @@ jobs:
       - name: Upload bare-metal artifact
         uses: actions/upload-artifact@v4
         with:
-          name: openlifu-console-fw-baremetal
-          if-no-files-found: error
+          name: lifu-console-fw-${{ steps.version.outputs.version }}
           path: |
             _artifacts/openlifu-console-fw-baremetal.bin
             _artifacts/openlifu-console-fw-baremetal.hex
