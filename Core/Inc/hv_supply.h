@@ -43,6 +43,7 @@ void set_use_exact(bool val);
 void HV_Enable(void);
 void HV_Disable(void);
 void HV_ClearDAC(void);
+void HV_RegisterInterlock(void);
 void V12_Enable(void);
 void V12_Disable(void);
 bool getHVOnStatus();

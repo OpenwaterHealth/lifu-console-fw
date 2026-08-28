@@ -13,6 +13,8 @@
 #include "fan_driver.h"
 #include "lifu_config.h"
 #include "rgb.h"
+#include "rgb_led.h"
+#include "rgb_effects.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -20,6 +22,7 @@
 #include <time.h>    // For seeding random number generator
 
 extern bool _enter_dfu;
+extern bool _force_stm32_dfu;
 extern ADS8678__HandleTypeDef vmon_adc;
 extern MAX31875_Init_t temp_sensor_1;
 extern MAX31875_Init_t temp_sensor_2;
@@ -44,6 +47,64 @@ static void print_uart_packet(const UartPacket* packet) {
         printf("0x%02X ", packet->data[i]);
     }
     printf("\r\n");
+}
+
+/* Parse and apply an OW_POWER_SET_RGB_FX payload (layout in common.h).
+ * Returns 0 on success, -1 on malformed payload / unknown effect. */
+static int32_t apply_rgb_fx(const UartPacket *cmd)
+{
+	if ((cmd->data == NULL) || (cmd->data_len < 6)) {
+		return -1;
+	}
+
+	uint8_t  fx     = cmd->data[0];
+	uint8_t  r      = cmd->data[1];
+	uint8_t  g      = cmd->data[2];
+	uint8_t  b      = cmd->data[3];
+	uint16_t period = (uint16_t)(cmd->data[4] | ((uint16_t)cmd->data[5] << 8));
+
+	switch (fx) {
+		case OW_RGB_FX_STOP:
+			RGB_EffectStop();
+			return 0;
+		case OW_RGB_FX_SOLID:
+			RGB_EffectStop();
+			RGB_SetColor(r, g, b, true);
+			return 0;
+		case OW_RGB_FX_FADE:
+			RGB_FadeTo(r, g, b, period);
+			return 0;
+		case OW_RGB_FX_BREATHE:
+			RGB_Breathe(r, g, b, period);
+			return 0;
+		case OW_RGB_FX_RAINBOW:
+			RGB_Rainbow(period);
+			return 0;
+		case OW_RGB_FX_FLASH:
+			RGB_Flash(r, g, b, period);
+			return 0;
+		case OW_RGB_FX_CYCLE: {
+			uint8_t  colors[RGB_CYCLE_MAX_COLORS][3];
+			uint16_t extra = (uint16_t)(cmd->data_len - 6U);
+			uint8_t  count = (uint8_t)(1U + (extra / 3U));
+
+			if (((extra % 3U) != 0U) || (count > RGB_CYCLE_MAX_COLORS)) {
+				return -1;
+			}
+			colors[0][0] = r;
+			colors[0][1] = g;
+			colors[0][2] = b;
+			for (uint8_t i = 1; i < count; i++) {
+				colors[i][0] = cmd->data[6U + (uint16_t)(i - 1U) * 3U];
+				colors[i][1] = cmd->data[7U + (uint16_t)(i - 1U) * 3U];
+				colors[i][2] = cmd->data[8U + (uint16_t)(i - 1U) * 3U];
+			}
+			RGB_ColorCycle(colors, count, period);
+			return 0;
+		}
+		default:
+			return -1;
+	}
 }
 
 static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
@@ -203,6 +264,14 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->command = OW_POWER_GET_RGB;
 			uartResp->reserved = RGB_Get();
 			break;
+		case OW_POWER_SET_RGB_FX:
+			uartResp->command = OW_POWER_SET_RGB_FX;
+			if (apply_rgb_fx(&cmd) != 0) {
+				uartResp->packet_type = OW_ERROR;
+				uartResp->data_len = 0;
+				uartResp->data = NULL;
+			}
+			break;
 		case OW_POWER_GET_HVON:
 			uartResp->command = OW_POWER_GET_HVON;
 			if(getHVOnStatus())
@@ -234,7 +303,6 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->data_len = 0;
 
 			_enter_dfu = false;
-
 			__HAL_TIM_CLEAR_FLAG(&htim17, TIM_FLAG_UPDATE);
 			__HAL_TIM_SET_COUNTER(&htim17, 0);
 
@@ -249,7 +317,11 @@ static void POWER_ProcessCommand(UartPacket *uartResp, UartPacket cmd)
 			uartResp->data_len = 0;
 
 			_enter_dfu = true;
-
+			if(cmd.reserved == 0x77){
+				_force_stm32_dfu = true;
+			}else{
+				_force_stm32_dfu = false;
+			}
 			__HAL_TIM_CLEAR_FLAG(&htim17, TIM_FLAG_UPDATE);
 			__HAL_TIM_SET_COUNTER(&htim17, 0);
 

@@ -49,8 +49,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define BL_BKP_SIGNATURE     (0x4F57424CU) /* 'OWBL' */
-#define BL_BKP_REQ_DFU_MAGIC (0x21554644U) /* 'DFU!' */
+#define BL_BKP_SIGNATURE           (0x4F57424CU) /* 'OWBL' */
+#define BL_BKP_REQ_DFU_MAGIC       (0x21554644U) /* 'DFU!' -> Open-LIFU bootloader DFU */
+#define BL_BKP_REQ_STM32_DFU_MAGIC (0x53554644U) /* 'DFUS' -> STM32 system bootloader */
 
 static void bl_bkp_enable(void)
 {
@@ -91,7 +92,9 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim7;
 TIM_HandleTypeDef htim14;
+TIM_HandleTypeDef htim16;
 TIM_HandleTypeDef htim17;
+DMA_HandleTypeDef hdma_tim16_ch1_up;
 
 UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart3_rx;
@@ -106,6 +109,8 @@ extern FAN_Driver fan[2];
 LifuConfig config;
 
 volatile bool _enter_dfu = false;
+volatile bool _force_stm32_dfu = false;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -125,6 +130,7 @@ static void MX_TIM7_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_IWDG_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM16_Init(void);
 /* USER CODE BEGIN PFP */
 
 void bootloader_mark_boot_ok(void)
@@ -187,6 +193,7 @@ int main(void)
   MX_I2C1_Init();
   MX_I2C2_Init();
   MX_SPI1_Init();
+  MX_USB_DEVICE_Init();
   MX_USART3_UART_Init();
   MX_TIM14_Init();
   MX_TIM17_Init();
@@ -195,6 +202,7 @@ int main(void)
   MX_TIM2_Init();
   MX_IWDG_Init();
   MX_TIM1_Init();
+  MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
 
 
@@ -244,6 +252,8 @@ int main(void)
   HAL_Delay(300);
 
   MX_USB_DEVICE_Init();
+
+  HV_RegisterInterlock();
 
   /* USER CODE END 2 */
 
@@ -675,7 +685,7 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 48000-1;
+  htim1.Init.Prescaler = 48000;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 1000-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -859,6 +869,38 @@ static void MX_TIM14_Init(void)
 }
 
 /**
+  * @brief TIM16 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM16_Init(void)
+{
+
+  /* USER CODE BEGIN TIM16_Init 0 */
+
+  /* USER CODE END TIM16_Init 0 */
+
+  /* USER CODE BEGIN TIM16_Init 1 */
+
+  /* USER CODE END TIM16_Init 1 */
+  htim16.Instance = TIM16;
+  htim16.Init.Prescaler = 0;
+  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim16.Init.Period = 65535;
+  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim16.Init.RepetitionCounter = 0;
+  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM16_Init 2 */
+
+  /* USER CODE END TIM16_Init 2 */
+
+}
+
+/**
   * @brief TIM17 Initialization Function
   * @param None
   * @retval None
@@ -938,6 +980,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel2_3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel2_3_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
+  /* DMA1_Channel4_5_6_7_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel4_5_6_7_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel4_5_6_7_IRQn);
 
 }
 
@@ -1093,11 +1138,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         // jump to bootloader DFU
         // 16k SRAM in address 0x2000 0000 - 0x2000 3FFF
         //*((unsigned long *)0x20003FF0) = 0xDEADBEEF;
-        
-        bl_bkp_enable();
-        RTC->BKP0R = BL_BKP_SIGNATURE;
-        RTC->BKP1R = BL_BKP_REQ_DFU_MAGIC;     
-
+        if(_force_stm32_dfu){
+          // Force STM32 bootloader DFU
+          bl_bkp_enable();
+          RTC->BKP0R = BL_BKP_SIGNATURE;
+          RTC->BKP1R = BL_BKP_REQ_STM32_DFU_MAGIC;     
+        } else {
+            // Force Open-LIFU bootloader DFU 
+          bl_bkp_enable();
+          RTC->BKP0R = BL_BKP_SIGNATURE;
+          RTC->BKP1R = BL_BKP_REQ_DFU_MAGIC;     
+        }
       }
 
       MX_USB_DEVICE_DeInit();

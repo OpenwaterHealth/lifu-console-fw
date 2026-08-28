@@ -20,7 +20,7 @@ volatile uint32_t ptrReceive;
 volatile uint8_t rx_flag = 0;
 volatile uint8_t tx_flag = 0;
 
-static void UART_INTERFACE_SendDMA(UartPacket* pResp)
+static void UART_INTERFACE_SendDMA(const UartPacket* pResp)
 {
 	// while (HAL_UART_GetState(&huart1) == HAL_UART_STATE_BUSY_TX);
 	memset(txBuffer, 0, sizeof(txBuffer));
@@ -172,7 +172,7 @@ NextDataPacket:
 }
 
 // Callback functions
-void comms_handle_RxCpltCallback(UART_HandleTypeDef *huart, uint16_t pos) {
+void comms_handle_RxCpltCallback(const UART_HandleTypeDef *huart, uint16_t pos) {
 
     if (huart->Instance == USART1) {
         // Notify the task
@@ -188,13 +188,14 @@ void CDC_handle_TxCpltCallback() {
 	tx_flag = 1;
 }
 
-void comms_handle_TxCallback(UART_HandleTypeDef *huart) {
+void comms_handle_TxCallback(const UART_HandleTypeDef *huart) {
 
 	if (huart->Instance == USART1) {
 		tx_flag = 1;
 	}
 }
 
+// cppcheck-suppress constParameterPointer -- must match the HAL weak callback signature (non-const UART_HandleTypeDef *)
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
 
     if (huart->Instance == USART1) {

@@ -26,6 +26,7 @@
 #include "usbd_cdc.h"
 
 /* USER CODE BEGIN Includes */
+#include "usb_events.h"
 
 /* USER CODE END Includes */
 
@@ -42,6 +43,7 @@ PCD_HandleTypeDef hpcd_USB_FS;
 void Error_Handler(void);
 
 /* USER CODE BEGIN 0 */
+volatile uint8_t usb_connected = 0;
 
 /* USER CODE END 0 */
 
@@ -180,6 +182,11 @@ void HAL_PCD_ResetCallback(PCD_HandleTypeDef *hpcd)
 
   /* Reset Device. */
   USBD_LL_Reset((USBD_HandleTypeDef*)hpcd->pData);
+  // Host detected us (cable plugged in, enumeration starting)
+  if(!usb_connected){
+    usb_notify(USB_EVENT_CONNECT);
+  }
+  usb_connected = 1;
 }
 
 /**
@@ -198,6 +205,10 @@ void HAL_PCD_SuspendCallback(PCD_HandleTypeDef *hpcd)
   USBD_LL_Suspend((USBD_HandleTypeDef*)hpcd->pData);
   /* Enter in STOP mode. */
   /* USER CODE BEGIN 2 */
+  if(usb_connected){
+    usb_notify(USB_EVENT_DISCONNECT);
+  }
+  usb_connected = 0;
   if (hpcd->Init.low_power_enable)
   {
     /* Set SLEEPDEEP bit and SleepOnExit of Cortex System Control Register. */
@@ -219,6 +230,11 @@ void HAL_PCD_ResumeCallback(PCD_HandleTypeDef *hpcd)
 #endif /* USE_HAL_PCD_REGISTER_CALLBACKS */
 {
   /* USER CODE BEGIN 3 */
+  if(!usb_connected){
+    usb_notify(USB_EVENT_CONNECT);
+  }
+  usb_connected = 1;
+
   if (hpcd->Init.low_power_enable)
   {
     /* Reset SLEEPDEEP bit of Cortex System Control Register. */

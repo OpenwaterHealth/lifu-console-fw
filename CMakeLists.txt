@@ -78,9 +78,20 @@ enable_language(C ASM)
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME})
 
-# Select linker script (bootloader variants shift app to 0x08008000)
+# Select linker script based on the BARE_METAL option:
+#   BARE_METAL=OFF (default) : image runs under the secure bootloader from the
+#                              active slot (linked at 0x08010400). This is the
+#                              normal Debug/Release build — the image that gets
+#                              signed and bundled into the production firmware.
+#   BARE_METAL=ON            : standalone image at 0x08000000 (no bootloader).
+# An explicit -DFLASH_LINKER_SCRIPT=... still overrides this selection.
+option(BARE_METAL "Build a bare-metal image (no custom bootloader; runs at 0x08000000)" OFF)
 if(NOT DEFINED FLASH_LINKER_SCRIPT)
-    set(FLASH_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/STM32F072XX_FLASH.ld")
+    if(BARE_METAL)
+        set(FLASH_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/STM32F072XX_FLASH.ld")
+    else()
+        set(FLASH_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/STM32F072XX_FLASH_BL.ld")
+    endif()
 endif()
 message(STATUS "Linker script: ${FLASH_LINKER_SCRIPT}")
 target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
@@ -98,7 +109,10 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
+    USB_DEVICE/App/usb_events.c
     Core/Src/ads8678.c
+    Core/Src/rgb_led.c
+    Core/Src/rgb_effects.c
     Core/Src/fan_driver.c
     Core/Src/flash_eeprom.c
     Core/Src/hv_calibration_coeffs.c

@@ -9,6 +9,7 @@
 #include "hv_supply.h"
 #include "utils.h"
 #include "hv_calibration_coeffs.h"
+#include "usb_events.h"
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -88,6 +89,7 @@ uint32_t HV_SetDACValue(DAC_Channel_t channel, DAC_BitDepth_t bitDepth, uint16_t
             return 0;
     }
 
+    // cppcheck-suppress badBitmaskCheck -- 0x0<<28 documents the DAC command field layout
     command = (0x0 << 28) | (0x3 << 24) | (channel << 20) | (value << 4);
     HV_DAC_WriteReg(command);
 
@@ -139,6 +141,10 @@ void set_current_dac(void)
 }
 
 void HV_Enable(void) {
+    if (!usb_is_port_open()) {
+        printf("HV Enable BLOCKED: USB port not open\r\n");
+        return;
+    }
     printf("HV Enable: Ramping to HVP: 0x%04X HVM: 0x%04X\r\n", current_hvp_val, current_hvm_val);
     uint16_t step_hvp = current_hvp_val / STEP_SIZE;
     uint16_t step_hvm = current_hvm_val / STEP_SIZE;
@@ -186,6 +192,24 @@ void HV_Disable(void) {
     HV_SetDACValue(DAC_CHANNEL_HVM, DAC_BIT_12, 0);
 
     HAL_GPIO_WritePin(HV_ON_GPIO_Port, HV_ON_Pin, GPIO_PIN_SET);
+}
+
+/**
+ * @brief  USB event callback — disables HV when the application disconnects.
+ */
+static void hv_usb_event_cb(usb_event_t event)
+{
+    (void)event;
+    if (getHVOnStatus()) {
+        printf("HV interlock: USB lost — disabling HV\r\n");
+        HV_Disable();
+    }
+}
+
+void HV_RegisterInterlock(void)
+{
+    usb_register_callback(USB_EVENT_PORT_CLOSE, hv_usb_event_cb);
+    usb_register_callback(USB_EVENT_DISCONNECT, hv_usb_event_cb);
 }
 
 void HV_ClearDAC(void) {
@@ -266,18 +290,6 @@ void read_all_adc_channels(ADS8678__HandleTypeDef *adc, ADC_ChannelData_t *outpu
         1.0f        // Ch 7: VCON-C1
     };
 
-    // Channel names (only needed for printing)
-    const char* channel_names[8] = {
-        "HVP_1",
-        "HVP_2",
-        "HVM_1",
-        "HVM_2",
-        "12V Line",
-        "VCON-A1",
-        "VCON-B1",
-        "VCON-C1"
-    };
-
     // Read all channels using manual mode
     for (int i = 0; i < 8; i++) {
         if (ADS8678_ReadChannelManual(adc, i, &adc_values[i]) == HAL_OK) {
@@ -326,6 +338,17 @@ void read_all_adc_channels(ADS8678__HandleTypeDef *adc, ADC_ChannelData_t *outpu
 
     // If output pointer is NULL, print to console
     if (output == NULL) {
+        // Channel names (only needed for printing)
+        const char* channel_names[8] = {
+            "HVP_1",
+            "HVP_2",
+            "HVM_1",
+            "HVM_2",
+            "12V Line",
+            "VCON-A1",
+            "VCON-B1",
+            "VCON-C1"
+        };
         printf("\r\n=== ADC Channel Readings ===\r\n");
         for (int i = 0; i < 8; i++) {
             printf("Channel %d (%s): %u (0x%04X) = %.3fV REAL: %.3fV \r\n",

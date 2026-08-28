@@ -27,6 +27,7 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN Includes */
+#include "utils.h"
 
 /* USER CODE END Includes */
 
@@ -72,6 +73,28 @@ void MX_USB_DEVICE_DeInit(void)
 
 }
 
+/**
+  * @brief  Forces the STM32F072 to electronically disconnect from the USB bus,
+  * waits for the host PC to clear the port, and cleanly re-initializes.
+  * @note   Call this when your SOF watchdog or Tx Timeout indicates an unrecoverable EMI fault.
+  */
+void MX_USB_DEVICE_HardReset(void)
+{
+    /* 1. Gracefully shut down the USB core stack */
+    MX_USB_DEVICE_DeInit();
+
+    /* 2. Force the internal D+ Pull-Up resistor OFF.
+          This drops the line to 0V, simulating a physical cable unplug to the host. */
+    USB->BCDR &= ~(USB_BCDR_DPPU);
+
+    /* 3. Enforce a physical timing window. 
+          The host OS needs at least 100ms-200ms of a low signal to register a disconnect. */
+    delay_us(200000);
+
+    /* 4. Re-initialize the USB Stack. 
+          MX_USB_DEVICE_Init automatically turns the DPPU back on via USBD_Start(). */
+    MX_USB_DEVICE_Init();
+}
 
 /* USER CODE END 1 */
 

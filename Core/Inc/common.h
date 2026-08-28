@@ -102,7 +102,27 @@ typedef enum {
 	OW_POWER_VMON = 0x40,
 	OW_POWER_RAW_DAC = 0x41,
 	OW_POWER_HV_ENABLE = 0x42,
+	OW_POWER_SET_RGB_FX = 0x43,
 } UstxPowerCommands;
+
+/* OW_POWER_SET_RGB_FX payload (cmd.data, little-endian):
+ *   byte 0    effect id (RgbFxId)
+ *   byte 1-3  r, g, b        (primary color; ignored for STOP/RAINBOW)
+ *   byte 4-5  period_ms u16  (FADE duration, BREATHE/RAINBOW/FLASH period,
+ *                             CYCLE dwell per color; ignored for STOP/SOLID)
+ *   byte 6+   CYCLE only: additional {r,g,b} triplets (first color comes
+ *             from bytes 1-3; max 8 colors total)
+ * Basic OW_POWER_SET_RGB / OW_POWER_GET_RGB are unchanged; effects do not
+ * alter the basic enum state reported by OW_POWER_GET_RGB. */
+typedef enum {
+	OW_RGB_FX_STOP    = 0,  /* cancel effect, hold current color */
+	OW_RGB_FX_SOLID   = 1,  /* static 24-bit color               */
+	OW_RGB_FX_FADE    = 2,  /* fade from current color to r,g,b  */
+	OW_RGB_FX_BREATHE = 3,  /* brightness 0->full->0, repeating  */
+	OW_RGB_FX_RAINBOW = 4,  /* hue wheel sweep, repeating        */
+	OW_RGB_FX_FLASH   = 5,  /* 50% on/off blink, repeating       */
+	OW_RGB_FX_CYCLE   = 6,  /* step through a color list         */
+} RgbFxId;
 
 typedef struct  {
 	uint16_t id;
